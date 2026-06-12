@@ -4,6 +4,7 @@
 
 // ─── Event Groups ───────────────────────────────────────────────────────────
 export const GET_EVENT_GROUPS = () => `/event-groups`;
+export const GET_EVENT_GROUP_DETAIL = (id: string) => `/event-groups/${id}`;
 
 // ─── Events ─────────────────────────────────────────────────────────────────
 export const GET_EVENTS = () => `/events`;
@@ -22,3 +23,7 @@ export const GET_SESSIONS = (eventId?: number) =>
 
 // ─── Users ──────────────────────────────────────────────────────────────────
 export const GET_USERS = () => `/users`;
+
+// ─── Participant ──────────────────────────────────────────────────────────────────s
+export const GET_PARTICIPANTS = () => `/participants`;
+export const GET_PARTICIPANT_DETAIL = (id: string) => `/participants/${id}`;

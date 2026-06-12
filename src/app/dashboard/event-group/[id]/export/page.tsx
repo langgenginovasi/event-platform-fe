@@ -5,14 +5,10 @@ import { Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
-// ─── Mock Data ──────────────────────────────────────────────────────────────
-
 const mockEvents = [
   { label: "Kongres Nasional 2026", value: 1 },
   { label: "Tech Summit 2026", value: 2 },
 ];
-
-// ─── Page ───────────────────────────────────────────────────────────────────
 
 export default function ExportPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -23,11 +19,6 @@ export default function ExportPage() {
     setIsLoading(true);
 
     try {
-      // TODO: replace with actual API call
-      // const res = await api.get(`/users-permissions/export?event_id=${selectedEvent}`)
-      // if (res?.data?.url) window.open(res.data.url, '_blank')
-
-      // Simulate export
       await new Promise((resolve) => setTimeout(resolve, 1500));
       toast.success("Export berhasil! File sedang diunduh.");
     } catch {
@@ -42,7 +33,9 @@ export default function ExportPage() {
       {/* Export form — matching old project layout */}
       <div className="flex flex-col sm:flex-row items-end gap-4">
         <div className="min-w-[20rem]">
-          <label className="text-xs font-medium text-gray-500 block mb-1">Pilih Event</label>
+          <label className="text-xs font-medium text-gray-500 block mb-1">
+            Pilih Event
+          </label>
           <select
             value={selectedEvent}
             onChange={(e) => setSelectedEvent(e.target.value)}
@@ -50,7 +43,9 @@ export default function ExportPage() {
           >
             <option value="">Pilih Event...</option>
             {mockEvents.map((ev) => (
-              <option key={ev.value} value={ev.value}>{ev.label}</option>
+              <option key={ev.value} value={ev.value}>
+                {ev.label}
+              </option>
             ))}
           </select>
         </div>
