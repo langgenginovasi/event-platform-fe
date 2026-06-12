@@ -16,6 +16,7 @@ import {
   QrCode,
   BarChart,
   ChevronLeft,
+  Clock,
 } from "lucide-react";
 import {
   Sheet,
@@ -43,10 +44,10 @@ const globalEventAdminNav: NavItem[] = [
   { name: "Peserta", href: "/dashboard/participant", icon: Users },
 ];
 
-// We will construct workspaceNav dynamically based on the current Event Group ID
 const getWorkspaceNav = (id: string): NavItem[] => [
   { name: "Overview", href: `/dashboard/event-group/${id}`, icon: LayoutDashboard },
   { name: "Event", href: `/dashboard/event-group/${id}/event`, icon: CalendarDays },
+  { name: "Sesi", href: `/dashboard/event-group/${id}/session`, icon: Clock },
   { name: "Registrasi", href: `/dashboard/event-group/${id}/registration`, icon: ClipboardList },
   { name: "Scan QR", href: `/dashboard/event-group/${id}/scan`, icon: QrCode },
   { name: "Laporan", href: `/dashboard/event-group/${id}/export`, icon: BarChart },
@@ -98,7 +99,7 @@ function SidebarContent({
       </div>
 
       {/* Nav Items */}
-      <nav className="flex-1 py-5 px-5 space-y-2 overflow-y-auto">
+      <nav className="flex-1 py-5 px-5 space-y-4 overflow-y-auto">
         {isWorkspaceMode && (
           <a
             href="/dashboard/event-group"
@@ -267,8 +268,8 @@ export default function DashboardLayout({
       </Sheet>
 
       {/* Desktop Sidebar — always visible */}
-      <aside className="hidden lg:block lg:shrink-0 w-[215px]">
-        <div className="fixed inset-y-0 left-0 w-[215px]">
+      <aside className="hidden lg:block lg:shrink-0 w-[260px]">
+        <div className="fixed inset-y-0 left-0 w-[260px]">
           <SidebarContent
             navItems={navItems}
             pathname={pathname}
@@ -336,7 +337,7 @@ export default function DashboardLayout({
         </header>
 
         {/* Page content */}
-        <main className="flex-1 p-6 md:px-10 md:py-8 overflow-y-auto pb-24 lg:pb-8">{children}</main>
+        <main className="flex-1 p-6 md:px-12 md:py-10 overflow-y-auto pb-28 lg:pb-10 w-full">{children}</main>
       </div>
 
       {/* Mobile Bottom Navbar */}

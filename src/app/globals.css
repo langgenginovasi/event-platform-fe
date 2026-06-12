@@ -5,12 +5,12 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  /* Brand Colors — diselaraskan dengan eventfe-platform-fe */
-  --color-primary: #001A41;
-  --color-secondary: #00245a;
-  --color-primary-hover: #04315e;
-  --color-primary-light: #0f52ba;
-  --color-primary-mid: #002d62;
+  /* Brand Colors — Clean Deep Enterprise Blue */
+  --color-primary: #0a2540;        /* Dominan: Sidebar & Teks Utama */
+  --color-secondary: #113a6a;      /* Variasi Biru Gelap Sekunder */
+  --color-primary-hover: #1a4c88;  /* State Hover untuk Elemen Gelap */
+  --color-primary-light: #2563eb;  /* Highlight, Outgoing Chat, Button Aktif */
+  --color-primary-mid: #1d4ed8;    /* Variasi Progress Bar / Batas */
 
   /* Accent */
   --color-accent-300: #7dd3fc;
@@ -18,62 +18,62 @@
   --color-accent-500: #0ea5e9;
 
   /* Neutral Surface */
-  --color-surface-light: #f8fafc;
-  --color-surface-white: #ffffff;
-  --color-surface-dark: #001A41;
+  --color-surface-light: #f8fafc;  /* Latar Belakang Aplikasi (Page BG) */
+  --color-surface-white: #ffffff;  /* Background Card & Konten Utama */
+  --color-surface-dark: #0a2540;
 
   --font-sans: ui-sans-serif, system-ui, sans-serif;
 }
 
 :root {
   --card-bg: rgba(255, 255, 255, 0.9);
-  --border-color: rgba(0, 26, 65, 0.1);
+  --border-color: rgba(10, 37, 64, 0.1);
 
   /* Sidebar */
-  --sidebar-bg: #001A41;
-  --sidebar-hover: #04315e;
-  --sidebar-active: #04315e;
+  --sidebar-bg: #0a2540;
+  --sidebar-hover: #1a4c88;
+  --sidebar-active: #1a4c88;
   --sidebar-text: #ffffff;
   --sidebar-muted: rgba(255,255,255,0.6);
 
   /* Primary Brand */
-  --brand-primary: #001A41;
-  --brand-secondary: #00245a;
-  --brand-mid: #002d62;
-  --brand-light: #0f52ba;
+  --brand-primary: #0a2540;
+  --brand-secondary: #113a6a;
+  --brand-mid: #1d4ed8;
+  --brand-light: #2563eb;
   /* ── shadcn tokens — mapped to brand palette ─── */
   --background: #f8fafc;
-  --foreground: #001A41;
+  --foreground: #0a2540;
   --card: #ffffff;
-  --card-foreground: #001A41;
+  --card-foreground: #0a2540;
   --popover: #ffffff;
-  --popover-foreground: #001A41;
-  --primary: #001A41;
+  --popover-foreground: #0a2540;
+  --primary: #0a2540;
   --primary-foreground: #ffffff;
   --secondary: #f1f5f9;
-  --secondary-foreground: #001A41;
+  --secondary-foreground: #0a2540;
   --muted: #f1f5f9;
   --muted-foreground: #64748b;
   --accent: #f1f5f9;
-  --accent-foreground: #001A41;
+  --accent-foreground: #0a2540;
   --destructive: #ef4444;
   --border: #e2e8f0;
   --input: #e2e8f0;
-  --ring: #0f52ba;
-  --chart-1: #001A41;
-  --chart-2: #0f52ba;
+  --ring: #2563eb;
+  --chart-1: #0a2540;
+  --chart-2: #2563eb;
   --chart-3: #0ea5e9;
   --chart-4: #38bdf8;
   --chart-5: #7dd3fc;
   --radius: 0.625rem;
-  --sidebar: #001A41;
+  --sidebar: #0a2540;
   --sidebar-foreground: #ffffff;
-  --sidebar-primary: #0f52ba;
+  --sidebar-primary: #2563eb;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #04315e;
+  --sidebar-accent: #1a4c88;
   --sidebar-accent-foreground: #ffffff;
   --sidebar-border: rgba(255,255,255,0.1);
-  --sidebar-ring: #0f52ba;
+  --sidebar-ring: #2563eb;
 }
 
 html,

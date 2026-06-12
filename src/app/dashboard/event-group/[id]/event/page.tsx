@@ -16,10 +16,11 @@ import {
   Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { usePermissions } from "@/hooks/usePermissions";
 import { cn } from "@/lib/utils";
+import { StatCard } from "@/components/dashboard/StatCard";
+import { TableToolbar } from "@/components/dashboard/TableToolbar";
+import { PaginationFooter } from "@/components/dashboard/PaginationFooter";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -29,7 +30,6 @@ interface EventItem {
   description: string;
   date_start: string;
   date_end: string;
-  participants: number;
 }
 
 // ─── Mock Data (replace with SWR fetch) ──────────────────────────────────────
@@ -41,7 +41,6 @@ const mockEvents: EventItem[] = [
     description: "Proses registrasi peserta",
     date_start: "2026-08-01 08:00",
     date_end: "2026-08-01 10:00",
-    participants: 80,
   },
   {
     id: 2,
@@ -49,7 +48,6 @@ const mockEvents: EventItem[] = [
     description: "Sesi pleno utama",
     date_start: "2026-08-01 10:00",
     date_end: "2026-08-01 17:00",
-    participants: 48,
   },
   {
     id: 3,
@@ -57,7 +55,6 @@ const mockEvents: EventItem[] = [
     description: "Makan malam bersama",
     date_start: "2026-08-01 19:00",
     date_end: "2026-08-01 22:00",
-    participants: 25,
   },
 ];
 
@@ -85,54 +82,31 @@ export default function EventPage() {
     <div className="flex flex-col space-y-7 md:space-y-10 pb-20 md:pb-0">
       {/* ── Summary Card ─────────────────────────────────────────────── */}
       <div className="flex flex-col space-y-3 md:space-x-4 md:flex-row md:space-y-0">
-        <Card className="w-full md:w-1/4 lg:w-1/5 border-l-4 border-l-[var(--brand-primary)]">
-          <CardContent className="p-4">
-            <p className="font-semibold text-gray-500 md:text-sm lg:text-base">Total Event</p>
-            <h3 className="text-lg font-bold md:text-xl" style={{ color: "var(--brand-primary)" }}>
-              {data?.total || 0}
-            </h3>
-          </CardContent>
-        </Card>
+        <div className="w-full md:w-1/4 lg:w-1/5">
+          <StatCard title="Total Event" value={data?.total || 0} />
+        </div>
       </div>
 
       {/* ── Sort + Table ─────────────────────────────────────────────── */}
       <div className="card-base card-border-primary overflow-hidden">
-        <div className="p-5 border-b border-gray-100 bg-white flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <h2 className="text-lg font-bold" style={{ color: "var(--brand-primary)" }}>
-            Daftar Event
-          </h2>
-          
-          {/* Toolbar */}
-          <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-            {/* Search */}
-            <div className="relative w-full sm:w-64">
-              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                <Search className="w-4 h-4 text-gray-400" />
-              </div>
-              <input
-                type="search"
-                autoComplete="off"
-                className="block w-full px-3 py-2 pl-9 text-sm text-gray-900 border border-gray-200 rounded-lg bg-gray-50 focus:ring-2 focus:ring-[var(--brand-light)] focus:border-[var(--brand-light)] outline-none transition-all"
-                placeholder="Cari event..."
-                value={keyword}
-                onChange={(e) => setKeyword(e.target.value)}
-              />
-            </div>
-
-            {/* Sort Dropdown removed in favor of table headers */}
-
-            {can("eventCreate") && (
+        <TableToolbar
+          title="Daftar Event"
+          keyword={keyword}
+          setKeyword={setKeyword}
+          searchPlaceholder="Cari event..."
+          actionButton={
+            can("eventCreate") && (
               <Button
                 onClick={() => {/* TODO: open add event modal */}}
-                className="whitespace-nowrap w-full sm:w-auto"
+                className="whitespace-nowrap w-full"
                 style={{ backgroundColor: "var(--brand-primary)" }}
               >
                 <Plus className="w-4 h-4 mr-1" />
                 Tambah Event
               </Button>
-            )}
-          </div>
-        </div>
+            )
+          }
+        />
 
         {/* Data Table */}
         <div className="relative overflow-x-auto">
@@ -153,9 +127,6 @@ export default function EventPage() {
                 </th>
                 <th className="px-5 py-4 whitespace-nowrap text-xs uppercase tracking-wider text-gray-500 font-semibold border-b cursor-pointer hover:bg-gray-100 transition-colors group">
                   <div className="flex items-center">Waktu Selesai <ArrowUpDown className="ml-2 h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" /></div>
-                </th>
-                <th className="px-5 py-4 whitespace-nowrap text-xs uppercase tracking-wider text-gray-500 font-semibold border-b text-center cursor-pointer hover:bg-gray-100 transition-colors group">
-                  <div className="flex items-center justify-center">Peserta <ArrowUpDown className="ml-2 h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" /></div>
                 </th>
                 <th className="px-5 py-4 whitespace-nowrap text-xs uppercase tracking-wider text-gray-500 font-semibold border-b text-right">Opsi</th>
               </tr>
@@ -179,30 +150,11 @@ export default function EventPage() {
                     <td className="px-5 py-4 text-sm text-gray-600 max-w-xs truncate">{event.description}</td>
                     <td className="px-5 py-4 text-sm text-gray-600">{event.date_start}</td>
                     <td className="px-5 py-4 text-sm text-gray-600">{event.date_end}</td>
-                    <td className="px-5 py-4 text-sm text-center">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full font-medium bg-blue-50 text-blue-700">
-                        {event.participants}
-                      </span>
-                    </td>
                     <td className="px-5 py-4 text-sm text-right">
                       <div className="flex items-center justify-end space-x-2">
                         <Button variant="outline" size="sm" className="h-8 border-gray-200">
                           <Eye className="w-3.5 h-3.5 mr-1.5" />
                           Detail
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={event.participants === 0}
-                          className={cn(
-                            "h-8",
-                            event.participants > 0
-                              ? "text-blue-700 border-blue-200 hover:bg-blue-50"
-                              : "text-gray-400 border-gray-200"
-                          )}
-                        >
-                          <Mail className="w-3.5 h-3.5 mr-1.5" />
-                          Email
                         </Button>
                         {can("eventEdit") && (
                           <Button variant="outline" size="sm" className="h-8 border-gray-200">
@@ -237,20 +189,13 @@ export default function EventPage() {
         </div>
 
         {/* Pagination */}
-        <div className="p-4 border-t border-gray-100 bg-gray-50/30 flex items-center justify-between">
-          <p className="text-sm text-gray-500 hidden sm:block">
-            Menampilkan <span className="font-medium text-gray-900">{data?.data?.length || 0}</span> data
-          </p>
-          <div className="flex items-center space-x-2 w-full sm:w-auto justify-center sm:justify-end">
-            <Button variant="outline" size="sm" className="h-8 px-2 border-gray-200" disabled>
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            <span className="text-sm text-gray-600 font-medium min-w-[3rem] text-center">1 / {data?.totalPage || 1}</span>
-            <Button variant="outline" size="sm" className="h-8 px-2 border-gray-200" disabled={(data?.totalPage ?? 0) <= 1}>
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
+        <PaginationFooter
+          currentPage={1}
+          totalPage={data?.totalPage || 1}
+          totalData={data?.data?.length || 0}
+          onPrev={() => {}}
+          onNext={() => {}}
+        />
       </div>
     </div>
   );
