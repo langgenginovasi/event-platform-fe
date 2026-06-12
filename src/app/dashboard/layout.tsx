@@ -3,6 +3,7 @@
 import { useSession, signOut } from "next-auth/react";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import {
   LayoutDashboard,
   CalendarDays,
@@ -24,6 +25,8 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import useSWR from "swr";
+import { GET_EVENT_GROUP_DETAIL } from "@/lib/api-endpoints";
 
 // ─── Nav item config ────────────────────────────────────────────────────────
 
@@ -76,25 +79,14 @@ function SidebarContent({
         style={{ backgroundColor: "var(--brand-primary)", borderRadius: "0 0 35px 0" }}
       >
         <div className="flex flex-col items-center">
-          <div className="p-3 bg-white rounded-full mb-2" style={{ boxShadow: "0 4px 12px rgba(0,0,0,0.2)" }}>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="40"
-              height="40"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#001A41"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-              <line x1="16" y1="2" x2="16" y2="6" />
-              <line x1="8" y1="2" x2="8" y2="6" />
-              <line x1="3" y1="10" x2="21" y2="10" />
-            </svg>
-          </div>
-          <span className="text-white font-bold text-sm tracking-wider uppercase">Event Platform</span>
+          <Image 
+            src="/logo-horizontal-white.png" 
+            alt="Event Platform Logo" 
+            width={180} 
+            height={60} 
+            className="object-contain drop-shadow-md"
+            priority
+          />
         </div>
       </div>
 
@@ -193,6 +185,14 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
+  // Detect workspace mode from URL (/dashboard/event-group/[id]/...)
+  const workspaceMatch = pathname.match(/\/dashboard\/event-group\/([^/]+)/);
+  const isWorkspaceMode = !!workspaceMatch;
+  const workspaceId = isWorkspaceMode ? workspaceMatch[1] : null;
+
+  // Fetch Workspace Detail if in Workspace mode (Rule of Hooks: must be called unconditionally / above returns)
+  const { data: eventGroupData } = useSWR(isWorkspaceMode && workspaceId ? GET_EVENT_GROUP_DETAIL(workspaceId) : null);
+
   // Close sheet on navigation
   useEffect(() => {
     setIsMobileOpen(false);
@@ -219,13 +219,6 @@ export default function DashboardLayout({
 
   const role = session.user?.role;
   
-  // Detect workspace mode from URL (/dashboard/event-group/[id]/...)
-  const workspaceMatch = pathname.match(/\/dashboard\/event-group\/([^/]+)/);
-  // We only count it as workspace mode if it's inside a specific event group ID.
-  // "event-group" itself is a global page.
-  const isWorkspaceMode = !!workspaceMatch;
-  const workspaceId = isWorkspaceMode ? workspaceMatch[1] : null;
-
   let navItems: NavItem[] = [];
   
   if (isWorkspaceMode && workspaceId) {
@@ -239,8 +232,19 @@ export default function DashboardLayout({
   }
 
   // Get page title from nav items (handling dynamic matches)
-  const activeItem = navItems.find((item) => pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href)));
-  const pageTitle = activeItem?.name ?? (isWorkspaceMode ? "Workspace" : "Dashboard");
+  const sortedNavItems = [...navItems].sort((a, b) => b.href.length - a.href.length);
+  const activeItem = sortedNavItems.find((item) => pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href)));
+  
+  let pageTitle = activeItem?.name ?? "Dashboard";
+  let subTitle = null;
+
+  if (isWorkspaceMode) {
+    if (eventGroupData?.data) {
+      subTitle = eventGroupData.data.name;
+    } else {
+      subTitle = "Memuat Workspace...";
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -289,12 +293,19 @@ export default function DashboardLayout({
             <div className="lg:hidden w-6" />
 
             {/* Page title */}
-            <h2
-              className="text-2xl md:text-4xl font-extrabold"
-              style={{ color: "var(--brand-primary)" }}
-            >
-              {pageTitle}
-            </h2>
+            <div className="flex flex-col">
+              <h2
+                className="text-2xl md:text-4xl font-extrabold"
+                style={{ color: "var(--brand-primary)" }}
+              >
+                {pageTitle}
+              </h2>
+              {subTitle && (
+                <span className="text-sm md:text-base text-gray-500 font-medium mt-1">
+                  {subTitle}
+                </span>
+              )}
+            </div>
 
             {/* User avatar */}
             {session.user?.name && (

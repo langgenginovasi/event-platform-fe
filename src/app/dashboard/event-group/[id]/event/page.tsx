@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useParams } from "next/navigation";
+import useSWR from "swr";
 import {
   Search,
   Plus,
@@ -21,74 +23,116 @@ import { cn } from "@/lib/utils";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { TableToolbar } from "@/components/dashboard/TableToolbar";
 import { PaginationFooter } from "@/components/dashboard/PaginationFooter";
+import { Checkbox } from "@/components/ui/checkbox";
+import { CardContent } from "@/components/ui/card";
+import { TableCard } from "@/components/dashboard/CustomCards";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
+import { api } from "@/lib/api";
+import { GET_EVENTS } from "@/lib/api-endpoints";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
-
 interface EventItem {
-  id: number;
+  id: string;
   name: string;
-  description: string;
-  date_start: string;
-  date_end: string;
+  start_datetime: string;
+  end_datetime: string;
 }
-
-// ─── Mock Data (replace with SWR fetch) ──────────────────────────────────────
-
-const mockEvents: EventItem[] = [
-  {
-    id: 1,
-    name: "Registrasi",
-    description: "Proses registrasi peserta",
-    date_start: "2026-08-01 08:00",
-    date_end: "2026-08-01 10:00",
-  },
-  {
-    id: 2,
-    name: "Hari 1 - Kongres",
-    description: "Sesi pleno utama",
-    date_start: "2026-08-01 10:00",
-    date_end: "2026-08-01 17:00",
-  },
-  {
-    id: 3,
-    name: "Gala Dinner",
-    description: "Makan malam bersama",
-    date_start: "2026-08-01 19:00",
-    date_end: "2026-08-01 22:00",
-  },
-];
-
-// ─── Sort options (from old project) ─────────────────────────────────────────
-
-const sortOptions = [
-  { label: "Nama - ASC", value: "name:ASC" },
-  { label: "Nama - DESC", value: "name:DESC" },
-  { label: "Tgl Mulai - ASC", value: "date_start:ASC" },
-  { label: "Tgl Mulai - DESC", value: "date_start:DESC" },
-];
 
 // ─── Page ───────────────────────────────────────────────────────────────────
 
 export default function EventPage() {
+  const { id } = useParams() as { id: string };
   const [keyword, setKeyword] = useState("");
-  const [order, setOrder] = useState("date_start:DESC");
-  const isLoading = false;
+  const [currentPage, setCurrentPage] = useState(1);
   const { can } = usePermissions();
 
-  // TODO: replace with SWR — useSWR(GET_EVENTS(currentPage, 10, keyword, false, order))
-  const data = { data: mockEvents, total: mockEvents.length, totalPage: 1 };
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<EventItem | null>(null);
+  const [formData, setFormData] = useState({
+    name: "",
+    start_datetime: "",
+    end_datetime: "",
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // SWR fetch
+  const { data, error, isLoading, mutate } = useSWR<{ data: EventItem[]; meta: any }>(
+    GET_EVENTS(id, currentPage, 10, keyword)
+  );
+
+  const handleOpenModal = (event?: EventItem) => {
+    if (event) {
+      setEditingEvent(event);
+      setFormData({
+        name: event.name,
+        // Remove 'Z' if present to format for datetime-local input
+        start_datetime: new Date(event.start_datetime).toISOString().slice(0, 16),
+        end_datetime: new Date(event.end_datetime).toISOString().slice(0, 16),
+      });
+    } else {
+      setEditingEvent(null);
+      setFormData({ name: "", start_datetime: "", end_datetime: "" });
+    }
+    setIsModalOpen(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      const payload = {
+        name: formData.name,
+        start_datetime: new Date(formData.start_datetime).toISOString(),
+        end_datetime: new Date(formData.end_datetime).toISOString(),
+      };
+
+      if (editingEvent) {
+        await api.put(`/events/${editingEvent.id}`, payload);
+        toast.success("Event berhasil diupdate");
+      } else {
+        await api.post("/events", { ...payload, event_group_id: id });
+        toast.success("Event berhasil ditambahkan");
+      }
+      setIsModalOpen(false);
+      mutate();
+    } catch (err: any) {
+      toast.error(err.message || "Terjadi kesalahan");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (eventId: string) => {
+    if (!confirm("Apakah Anda yakin ingin menghapus event ini?")) return;
+    try {
+      await api.delete(`/events/${eventId}`);
+      toast.success("Event berhasil dihapus");
+      mutate();
+    } catch (err: any) {
+      toast.error(err.message || "Gagal menghapus event");
+    }
+  };
 
   return (
     <div className="flex flex-col space-y-7 md:space-y-10 pb-20 md:pb-0">
       {/* ── Summary Card ─────────────────────────────────────────────── */}
       <div className="flex flex-col space-y-3 md:space-x-4 md:flex-row md:space-y-0">
         <div className="w-full md:w-1/4 lg:w-1/5">
-          <StatCard title="Total Event" value={data?.total || 0} />
+          <StatCard title="Total Event" value={data?.meta?.total || 0} />
         </div>
       </div>
 
       {/* ── Sort + Table ─────────────────────────────────────────────── */}
-      <div className="card-base card-border-primary overflow-hidden">
+      <TableCard>
         <TableToolbar
           title="Daftar Event"
           keyword={keyword}
@@ -97,7 +141,7 @@ export default function EventPage() {
           actionButton={
             can("eventCreate") && (
               <Button
-                onClick={() => {/* TODO: open add event modal */}}
+                onClick={() => handleOpenModal()}
                 className="whitespace-nowrap w-full"
                 style={{ backgroundColor: "var(--brand-primary)" }}
               >
@@ -109,55 +153,51 @@ export default function EventPage() {
         />
 
         {/* Data Table */}
-        <div className="relative overflow-x-auto">
-          <table className="table-base w-full border-none">
-            <thead className="table-header bg-gray-50/50">
-              <tr>
-                <th className="px-5 py-4 w-12 border-b">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader className="bg-slate-50">
+              <TableRow>
+                <TableHead className="w-12 text-center">
                   <Checkbox />
-                </th>
-                <th className="px-5 py-4 whitespace-nowrap text-xs uppercase tracking-wider text-gray-500 font-semibold border-b cursor-pointer hover:bg-gray-100 transition-colors group">
-                  <div className="flex items-center">Nama <ArrowUpDown className="ml-2 h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" /></div>
-                </th>
-                <th className="px-5 py-4 whitespace-nowrap text-xs uppercase tracking-wider text-gray-500 font-semibold border-b cursor-pointer hover:bg-gray-100 transition-colors group">
-                  <div className="flex items-center">Deskripsi <ArrowUpDown className="ml-2 h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" /></div>
-                </th>
-                <th className="px-5 py-4 whitespace-nowrap text-xs uppercase tracking-wider text-gray-500 font-semibold border-b cursor-pointer hover:bg-gray-100 transition-colors group">
-                  <div className="flex items-center">Waktu Mulai <ArrowUpDown className="ml-2 h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" /></div>
-                </th>
-                <th className="px-5 py-4 whitespace-nowrap text-xs uppercase tracking-wider text-gray-500 font-semibold border-b cursor-pointer hover:bg-gray-100 transition-colors group">
-                  <div className="flex items-center">Waktu Selesai <ArrowUpDown className="ml-2 h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" /></div>
-                </th>
-                <th className="px-5 py-4 whitespace-nowrap text-xs uppercase tracking-wider text-gray-500 font-semibold border-b text-right">Opsi</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
+                </TableHead>
+                <TableHead>
+                  <div className="flex items-center cursor-pointer group">Nama <ArrowUpDown className="ml-2 h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" /></div>
+                </TableHead>
+                <TableHead>
+                  <div className="flex items-center cursor-pointer group">Waktu Mulai <ArrowUpDown className="ml-2 h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" /></div>
+                </TableHead>
+                <TableHead>
+                  <div className="flex items-center cursor-pointer group">Waktu Selesai <ArrowUpDown className="ml-2 h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" /></div>
+                </TableHead>
+                <TableHead className="text-right">Opsi</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {isLoading && (
-                <tr>
-                  <td colSpan={6} className="h-32 text-center">
-                    <Loader2 className="w-6 h-6 animate-spin mx-auto text-gray-400" />
-                  </td>
-                </tr>
+                <TableRow>
+                  <TableCell colSpan={5} className="h-32 text-center">
+                    <Loader2 className="w-6 h-6 animate-spin mx-auto text-muted-foreground" />
+                  </TableCell>
+                </TableRow>
               )}
 
               {!isLoading &&
                 data?.data?.map((event) => (
-                  <tr key={event.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-5 py-4">
+                  <TableRow key={event.id}>
+                    <TableCell className="text-center">
                       <Checkbox />
-                    </td>
-                    <td className="px-5 py-4 text-sm font-semibold" style={{ color: "var(--brand-primary)" }}>{event.name}</td>
-                    <td className="px-5 py-4 text-sm text-gray-600 max-w-xs truncate">{event.description}</td>
-                    <td className="px-5 py-4 text-sm text-gray-600">{event.date_start}</td>
-                    <td className="px-5 py-4 text-sm text-gray-600">{event.date_end}</td>
-                    <td className="px-5 py-4 text-sm text-right">
+                    </TableCell>
+                    <TableCell className="font-semibold text-foreground">{event.name}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {new Date(event.start_datetime).toLocaleString("id-ID")}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {new Date(event.end_datetime).toLocaleString("id-ID")}
+                    </TableCell>
+                    <TableCell className="text-right">
                       <div className="flex items-center justify-end space-x-2">
-                        <Button variant="outline" size="sm" className="h-8 border-gray-200">
-                          <Eye className="w-3.5 h-3.5 mr-1.5" />
-                          Detail
-                        </Button>
                         {can("eventEdit") && (
-                          <Button variant="outline" size="sm" className="h-8 border-gray-200">
+                          <Button variant="outline" size="sm" onClick={() => handleOpenModal(event)}>
                             <Edit3 className="w-3.5 h-3.5 mr-1.5" />
                             Edit
                           </Button>
@@ -166,37 +206,84 @@ export default function EventPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="h-8 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                            className="text-destructive border-destructive/20 hover:bg-destructive/10 hover:text-destructive"
+                            onClick={() => handleDelete(event.id)}
                           >
                             <Trash2 className="w-3.5 h-3.5 mr-1.5" />
                             Hapus
                           </Button>
                         )}
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
 
               {!isLoading && (!data?.data || data.data.length === 0) && (
-                <tr>
-                  <td colSpan={7} className="h-32 text-center text-gray-500 text-sm">
+                <TableRow>
+                  <TableCell colSpan={5} className="h-32 text-center text-muted-foreground text-sm">
                     Tidak ada data event
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
 
         {/* Pagination */}
         <PaginationFooter
-          currentPage={1}
-          totalPage={data?.totalPage || 1}
-          totalData={data?.data?.length || 0}
-          onPrev={() => {}}
-          onNext={() => {}}
+          currentPage={currentPage}
+          totalPage={data?.meta?.total_pages || 1}
+          totalData={data?.meta?.total || 0}
+          onPrev={() => setCurrentPage((p) => Math.max(1, p - 1))}
+          onNext={() => setCurrentPage((p) => Math.min(data?.meta?.total_pages || 1, p + 1))}
         />
-      </div>
+      </TableCard>
+
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>{editingEvent ? "Edit Event" : "Tambah Event"}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Nama Event</label>
+              <Input
+                required
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Masukkan nama event"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Waktu Mulai</label>
+              <Input
+                required
+                type="datetime-local"
+                value={formData.start_datetime}
+                onChange={(e) => setFormData({ ...formData, start_datetime: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Waktu Selesai</label>
+              <Input
+                required
+                type="datetime-local"
+                value={formData.end_datetime}
+                onChange={(e) => setFormData({ ...formData, end_datetime: e.target.value })}
+              />
+            </div>
+            <DialogFooter className="pt-4">
+              <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
+                Batal
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                Simpan
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

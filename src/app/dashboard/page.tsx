@@ -13,6 +13,8 @@ import {
   Plus,
   ChevronRight,
 } from "lucide-react";
+import { GlassCard, AnalyticCard, TableCard } from "@/components/dashboard/CustomCards";
+import { Table, TableBody } from "@/components/ui/table";
 
 import {
   GET_EVENT_GROUPS,
@@ -292,9 +294,9 @@ export default function EventAdminDashboard() {
         {stats.map((stat, idx) => {
           const Icon = stat.icon;
           return (
-            <div
+            <AnalyticCard
               key={idx}
-              className="card-base card-border-primary w-full p-4 md:w-1/4 lg:w-1/5"
+              className="border-l-4 border-l-[var(--brand-primary)] w-full p-4 md:w-1/4 lg:w-1/5 shadow-sm hover:shadow-md transition-shadow"
             >
               <div
                 className="inline-flex items-center justify-center w-10 h-10 rounded-full mb-3"
@@ -311,7 +313,7 @@ export default function EventAdminDashboard() {
               >
                 {stat.value}
               </h3>
-            </div>
+            </AnalyticCard>
           );
         })}
       </div>
@@ -320,8 +322,8 @@ export default function EventAdminDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
         {/* Event Groups Table */}
         <div className="lg:col-span-2">
-          <div className="card-base overflow-hidden">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+          <TableCard>
+            <div className="p-5 border-b flex justify-between items-center bg-white/50">
               <h2
                 className="text-lg font-bold"
                 style={{ color: "var(--brand-primary)" }}
@@ -337,67 +339,67 @@ export default function EventAdminDashboard() {
               </a>
             </div>
 
-            <div className="divide-y divide-gray-100">
-              {recentEventGroups.map((group: any) => {
-                const today = new Date();
+            <Table>
+              <TableBody>
+                {recentEventGroups.map((group: any) => {
+                  const today = new Date();
 
-                const status =
-                  new Date(group.start_date) <= today &&
-                  new Date(group.end_date) >= today
-                    ? "Aktif"
-                    : "Mendatang";
+                  const status =
+                    new Date(group.start_date) <= today &&
+                    new Date(group.end_date) >= today
+                      ? "Aktif"
+                      : "Mendatang";
 
-                return (
-                  <div
-                    key={group.id}
-                    onClick={() =>
-                      router.push(`/dashboard/event-group/${group.id}`)
-                    }
-                    className="flex items-center justify-between px-6 py-4 transition-colors hover:bg-gray-50 group cursor-pointer"
-                  >
-                    <div>
-                      <h3
-                        className="text-base font-semibold text-gray-800 group-hover:transition-colors"
-                        style={{ color: "var(--brand-primary)" }}
-                      >
-                        {group.name}
-                      </h3>
-                      <p className="text-xs text-gray-400 mt-1">
-                        {group._count?.registrations ?? 0} peserta
-                      </p>
+                  return (
+                    <div
+                      key={group.id}
+                      onClick={() =>
+                        router.push(`/dashboard/event-group/${group.id}`)
+                      }
+                      className="flex items-center justify-between px-6 py-4 transition-colors hover:bg-gray-50 group cursor-pointer"
+                    >
+                      <div>
+                        <h3
+                          className="text-base font-semibold text-gray-800 group-hover:transition-colors"
+                          style={{ color: "var(--brand-primary)" }}
+                        >
+                          {group.name}
+                        </h3>
+                        <p className="text-xs text-gray-400 mt-1">
+                          {group._count?.registrations ?? 0} peserta
+                        </p>
 
-                      <p className="text-sm text-gray-500 mt-0.5 flex items-center gap-1">
-                        <Calendar className="h-3.5 w-3.5" />
-                        {/* {group.dates} */}
+                        <p className="text-sm text-gray-500 mt-0.5 flex items-center gap-1">
+                          <Calendar className="h-3.5 w-3.5" />
+                          {new Date(group.start_date).toLocaleDateString("id-ID")}
+                          {" - "}
+                          {new Date(group.end_date).toLocaleDateString("id-ID")}
+                        </p>
+                      </div>
 
-                        {new Date(group.start_date).toLocaleDateString("id-ID")}
-                        {" - "}
-                        {new Date(group.end_date).toLocaleDateString("id-ID")}
-                      </p>
+                      <div className="flex items-center gap-3">
+                        <span
+                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${
+                            status === "Aktif"
+                              ? "bg-green-50 text-green-700 border-green-200"
+                              : "bg-blue-50 border-blue-200"
+                          }`}
+                          style={
+                            status !== "Aktif"
+                              ? { color: "var(--brand-primary)" }
+                              : {}
+                          }
+                        >
+                          {status}
+                        </span>
+                        <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-gray-500 transition-colors" />
+                      </div>
                     </div>
-
-                    <div className="flex items-center gap-3">
-                      <span
-                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${
-                          status === "Aktif"
-                            ? "bg-green-50 text-green-700 border-green-200"
-                            : "bg-blue-50 border-blue-200"
-                        }`}
-                        style={
-                          status !== "Aktif"
-                            ? { color: "var(--brand-primary)" }
-                            : {}
-                        }
-                      >
-                        {status}
-                      </span>
-                      <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-gray-500 transition-colors" />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </TableCard>
         </div>
 
         {/* Quick Actions */}
@@ -441,7 +443,7 @@ export default function EventAdminDashboard() {
           </div>
 
           {/* Stats mini card */}
-          <div className="card-base p-5">
+          <GlassCard className="p-5">
             <h3
               className="text-sm font-bold mb-3"
               style={{ color: "var(--brand-primary)" }}
@@ -499,7 +501,7 @@ export default function EventAdminDashboard() {
                 </div>
               ))}
             </div>
-          </div>
+          </GlassCard>
         </div>
       </div>
 

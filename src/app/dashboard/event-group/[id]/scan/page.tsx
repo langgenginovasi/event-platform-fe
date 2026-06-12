@@ -6,6 +6,7 @@ import { Html5QrcodeScanner, Html5QrcodeScanType } from "html5-qrcode";
 import { Camera, CheckCircle2, ScanLine, AlertCircle, ArrowDownToLine, ArrowUpFromLine, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { GlassCard } from "@/components/dashboard/CustomCards";
 import { cn } from "@/lib/utils";
 
 // TODO: Replace with real API fetch
@@ -31,32 +32,8 @@ export default function WorkspaceScanPage() {
 
   const isReadyToScan = selectedEventId !== null && scanType !== null;
 
-  useEffect(() => {
-    if (isScanning && !scannerRef.current) {
-      scannerRef.current = new Html5QrcodeScanner(
-        "dashboard-qr-reader",
-        {
-          fps: 10,
-          qrbox: { width: 250, height: 250 },
-          aspectRatio: 1.0,
-          supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
-        },
-        false
-      );
-
-      scannerRef.current.render(onScanSuccess, onScanFailure);
-    }
-
-    return () => {
-      if (scannerRef.current) {
-        scannerRef.current.clear().catch(error => {
-          console.error("Failed to clear html5QrcodeScanner. ", error);
-        });
-        scannerRef.current = null;
-      }
-    };
-  }, [isScanning]);
-
+  // The scanner initialization has been moved to the QRScanner component
+  // to ensure the DOM element exists before Html5QrcodeScanner is initialized.
   const requestCameraPermission = async () => {
     setCameraError(null);
     try {
@@ -124,17 +101,9 @@ export default function WorkspaceScanPage() {
   return (
     <div className="flex flex-col h-full max-w-md mx-auto space-y-6 pb-20">
       
-      {/* Header Info */}
-      <div className="text-center space-y-1">
-        <h1 className="text-2xl font-bold" style={{ color: "var(--brand-primary)" }}>
-          Pemindai QR
-        </h1>
-        <p className="text-sm text-gray-500">
-          Atur sesi acara lalu pindai QR Code peserta.
-        </p>
-      </div>
+      {/* Header Info is now handled by the global layout */}
 
-      <div className="card-base p-5 space-y-6 bg-white/70 backdrop-blur-xl border border-white/40 shadow-sm rounded-2xl relative overflow-hidden">
+      <GlassCard className="p-5 space-y-6 relative overflow-hidden">
         {/* Decorative elements */}
         <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--brand-light)] rounded-full blur-3xl opacity-30 -mr-10 -mt-10"></div>
         <div className="absolute bottom-0 left-0 w-24 h-24 bg-emerald-100 rounded-full blur-2xl opacity-50 -ml-10 -mb-10"></div>
@@ -196,7 +165,7 @@ export default function WorkspaceScanPage() {
             </Button>
           </div>
         </div>
-      </div>
+      </GlassCard>
 
         {/* Step 3: Dialog Scanner */}
         <Dialog open={isScanning || scanStatus !== "IDLE"} onOpenChange={(open) => { if (!open) stopScanning(); }}>
@@ -219,7 +188,7 @@ export default function WorkspaceScanPage() {
                   {scanResult && <p className="text-sm text-gray-400 mt-4 break-all px-4 max-w-lg mx-auto">{scanResult}</p>}
                 </div>
               </div>
-            ) : isScanning ? (
+            ) : (
               <div className="relative w-full h-full bg-black flex flex-col flex-1">
                 {/* Close Button */}
                 <button 
@@ -230,7 +199,7 @@ export default function WorkspaceScanPage() {
                 </button>
                 
                 {/* The Html5QrcodeScanner container */}
-                <div id="dashboard-qr-reader" className="w-full flex-1 border-none [&_video]:object-cover [&_video]:w-full [&_video]:h-full flex flex-col" />
+                <QRScanner onScanSuccess={onScanSuccess} onScanFailure={onScanFailure} />
                 
                 {/* Overlay Area */}
                 <div className="absolute inset-0 pointer-events-none z-10 flex flex-col items-center justify-center pb-20">
@@ -250,7 +219,7 @@ export default function WorkspaceScanPage() {
                   </div>
                 </div>
               </div>
-            ) : null}
+            )}
           </DialogContent>
         </Dialog>
 
@@ -282,8 +251,48 @@ export default function WorkspaceScanPage() {
             </Button>
           </div>
         )}
-
-      </div>
     </div>
   );
+}
+
+function QRScanner({ 
+  onScanSuccess, 
+  onScanFailure 
+}: { 
+  onScanSuccess: (decodedText: string) => void, 
+  onScanFailure: (error: any) => void 
+}) {
+  const successRef = useRef(onScanSuccess);
+  const failureRef = useRef(onScanFailure);
+
+  useEffect(() => {
+    successRef.current = onScanSuccess;
+    failureRef.current = onScanFailure;
+  }, [onScanSuccess, onScanFailure]);
+
+  useEffect(() => {
+    const scanner = new Html5QrcodeScanner(
+      "dashboard-qr-reader",
+      {
+        fps: 10,
+        qrbox: { width: 250, height: 250 },
+        aspectRatio: 1.0,
+        supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
+      },
+      false
+    );
+
+    scanner.render(
+      (text) => successRef.current(text),
+      (err) => failureRef.current(err)
+    );
+
+    return () => {
+      scanner.clear().catch(error => {
+        console.error("Failed to clear html5QrcodeScanner. ", error);
+      });
+    };
+  }, []);
+
+  return <div id="dashboard-qr-reader" className="w-full flex-1 border-none [&_video]:object-cover [&_video]:w-full [&_video]:h-full flex flex-col" />;
 }

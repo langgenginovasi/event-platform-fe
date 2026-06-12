@@ -440,6 +440,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { TableCard } from "@/components/dashboard/CustomCards";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { PaginationFooter } from "@/components/dashboard/PaginationFooter";
+import { Input } from "@/components/ui/input";
 
 import { GET_EVENT_GROUPS } from "@/lib/api-endpoints";
 
@@ -652,7 +656,7 @@ export default function EventGroupPage() {
       </div>
 
       {/* ── Sort + Table ─────────────────────────────────────────────── */}
-      <div className="card-base card-border-primary overflow-hidden">
+      <TableCard>
         <div className="p-5 border-b border-gray-100 bg-white flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <h2
             className="text-lg font-bold"
@@ -664,14 +668,10 @@ export default function EventGroupPage() {
           <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
             {/* Search */}
             <div className="relative w-full sm:w-64">
-              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                <Search className="w-4 h-4 text-gray-400" />
-              </div>
-              <input
-                type="search"
-                autoComplete="off"
-                className="block w-full px-3 py-2 pl-9 text-sm text-gray-900 border border-gray-200 rounded-lg bg-gray-50 focus:ring-2 focus:ring-[var(--brand-light)] focus:border-[var(--brand-light)] outline-none transition-all"
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
+              <Input
                 placeholder="Cari grup event..."
+                className="pl-9 bg-slate-50 focus-visible:ring-primary h-10 w-full"
                 value={keyword}
                 onChange={(e) => setKeyword(e.target.value)}
               />
@@ -692,78 +692,63 @@ export default function EventGroupPage() {
 
         {/* Data Table */}
         <div className="relative overflow-x-auto">
-          <table className="table-base w-full border-none">
-            <thead className="table-header bg-gray-50/50">
-              <tr>
-                <th className="px-5 py-4 w-12 border-b">
+          <Table>
+            <TableHeader className="bg-slate-50">
+              <TableRow>
+                <TableHead className="w-12 text-center">
                   <Checkbox />
-                </th>
-                <th className="px-5 py-4 whitespace-nowrap text-xs uppercase tracking-wider text-gray-500 font-semibold border-b">
-                  Nama
-                </th>
-                <th className="px-5 py-4 whitespace-nowrap text-xs uppercase tracking-wider text-gray-500 font-semibold border-b">
-                  Deskripsi
-                </th>
-                <th className="px-5 py-4 whitespace-nowrap text-xs uppercase tracking-wider text-gray-500 font-semibold border-b">
-                  Tgl Mulai
-                </th>
-                <th className="px-5 py-4 whitespace-nowrap text-xs uppercase tracking-wider text-gray-500 font-semibold border-b">
-                  Tgl Selesai
-                </th>
-                <th className="px-5 py-4 whitespace-nowrap text-xs uppercase tracking-wider text-gray-500 font-semibold border-b text-center">
-                  Peserta
-                </th>
-                <th className="px-5 py-4 whitespace-nowrap text-xs uppercase tracking-wider text-gray-500 font-semibold border-b text-right">
-                  Opsi
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
+                </TableHead>
+                <TableHead>Nama</TableHead>
+                <TableHead>Deskripsi</TableHead>
+                <TableHead>Tgl Mulai</TableHead>
+                <TableHead>Tgl Selesai</TableHead>
+                <TableHead className="text-center">Peserta</TableHead>
+                <TableHead className="text-right">Opsi</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {isLoading && (
-                <tr>
-                  <td colSpan={7} className="h-32 text-center">
-                    <Loader2 className="w-6 h-6 animate-spin mx-auto text-gray-400" />
-                  </td>
-                </tr>
+                <TableRow>
+                  <TableCell colSpan={7} className="h-32 text-center">
+                    <Loader2 className="w-6 h-6 animate-spin mx-auto text-muted-foreground" />
+                  </TableCell>
+                </TableRow>
               )}
 
               {!isLoading &&
                 data.items.map((event: EventItem) => (
-                  <tr
+                  <TableRow
                     key={event.id}
-                    className="hover:bg-gray-50/50 transition-colors cursor-pointer"
+                    className="hover:bg-blue-50/50 transition-colors cursor-pointer"
                     onClick={() =>
                       router.push(`/dashboard/event-group/${event.id}`)
                     }
                   >
-                    <td
-                      className="px-5 py-4"
-                      onClick={(e) => e.stopPropagation()}
-                    >
+                    <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
                       <Checkbox />
-                    </td>
-                    <td
-                      className="px-5 py-4 text-sm font-semibold"
+                    </TableCell>
+                    <TableCell
+                      className="font-semibold"
                       style={{ color: "var(--brand-primary)" }}
                     >
                       {event.name}
-                    </td>
-                    <td className="px-5 py-4 text-sm text-gray-600 max-w-xs truncate">
+                    </TableCell>
+                    <TableCell className="text-muted-foreground max-w-xs truncate">
                       {event.description}
-                    </td>
-                    <td className="px-5 py-4 text-sm text-gray-600">
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
                       {event.date_start}
-                    </td>
-                    <td className="px-5 py-4 text-sm text-gray-600">
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
                       {event.date_end}
-                    </td>
-                    <td className="px-5 py-4 text-sm text-center">
+                    </TableCell>
+                    <TableCell className="text-center">
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full font-medium bg-blue-50 text-blue-700">
                         {event.participants}
                       </span>
-                    </td>
-                    <td
-                      className="px-5 py-4 text-sm text-right"
+                    </TableCell>
+                    <TableCell
+                      className="text-right"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <div className="flex items-center justify-end space-x-2">
@@ -795,7 +780,7 @@ export default function EventGroupPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="h-8 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                            className="text-destructive border-destructive/20 hover:bg-destructive/10 hover:text-destructive"
                             onClick={() => {
                               setSelectedId(event.id);
                               setOpenDelete(true);
@@ -805,151 +790,123 @@ export default function EventGroupPage() {
                           </Button>
                         )}
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
 
               {!isLoading && data.items.length === 0 && (
-                <tr>
-                  <td
+                <TableRow>
+                  <TableCell
                     colSpan={7}
-                    className="h-32 text-center text-gray-500 text-sm"
+                    className="h-32 text-center text-muted-foreground text-sm"
                   >
                     Tidak ada data grup event
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
 
         {/* Pagination */}
-        <div className="p-4 border-t border-gray-100 bg-gray-50/30 flex items-center justify-between">
-          <p className="text-sm text-gray-500 hidden sm:block">
-            Menampilkan{" "}
-            <span className="font-medium text-gray-900">{data.total || 0}</span>{" "}
-            data
-          </p>
-          <div className="flex items-center space-x-2 w-full sm:w-auto justify-center sm:justify-end">
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 px-2 border-gray-200"
-              disabled
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            <span className="text-sm text-gray-600 font-medium min-w-[3rem] text-center">
-              1 / {data?.totalPage || 1}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 px-2 border-gray-200"
-              disabled={(data?.totalPage ?? 0) <= 1}
-            >
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
-      </div>
+        <PaginationFooter
+          currentPage={1}
+          totalPage={data?.totalPage || 1}
+          totalData={data?.total || 0}
+        />
+      </TableCard>
 
       {/* ── POP UP tambah grup event────────────────────────── */}
-      {openCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-lg w-full max-w-md p-6">
-            <h2 className="text-lg font-bold mb-4">Tambah Grup Event</h2>
+      <Dialog open={openCreateModal} onOpenChange={setOpenCreateModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Tambah Grup Event Baru</DialogTitle>
+          </DialogHeader>
 
-            <div className="space-y-4">
-              {errors.api && (
-                <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
-                  {errors.api}
-                </div>
+          <div className="space-y-4 py-4">
+            {errors.api && (
+              <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+                {errors.api}
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Nama Event</label>
+              <Input
+                type="text"
+                placeholder="Misal: Konser Musik 2026"
+                value={form.name}
+                onChange={(e) => {
+                  setForm({ ...form, name: e.target.value });
+                  setErrors({ ...errors, name: "" });
+                }}
+                className={errors.name ? "border-red-500" : ""}
+              />
+              {errors.name && (
+                <p className="mt-1 text-xs text-red-500">{errors.name}</p>
               )}
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nama Event
-                </label>
-                <input
-                  type="text"
-                  placeholder="Masukkan Nama Event"
-                  value={form.name}
-                  onChange={(e) => {
-                    setForm({ ...form, name: e.target.value });
-                    setErrors({ ...errors, name: "" });
-                  }}
-                  className={`w-full rounded px-3 py-2 border text-sm outline-none transition-all focus:ring-1 focus:ring-[var(--brand-light)] ${
-                    errors.name ? "border-red-500" : "border-gray-300"
-                  }`}
-                />
-                {errors.name && (
-                  <p className="mt-1 text-xs text-red-500">{errors.name}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Tanggal Mulai
-                </label>
-                <input
-                  type="datetime-local"
-                  value={form.start_date}
-                  onChange={(e) => {
-                    setForm({ ...form, start_date: e.target.value });
-                    setErrors({ ...errors, start_date: "" });
-                  }}
-                  className={`w-full rounded px-3 py-2 border text-sm outline-none transition-all focus:ring-1 focus:ring-[var(--brand-light)] ${
-                    errors.start_date ? "border-red-500" : "border-gray-300"
-                  }`}
-                />
-                {errors.start_date && (
-                  <p className="mt-1 text-xs text-red-500">
-                    {errors.start_date}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Tanggal Selesai
-                </label>
-                <input
-                  type="datetime-local"
-                  value={form.end_date}
-                  onChange={(e) => {
-                    setForm({ ...form, end_date: e.target.value });
-                    setErrors({ ...errors, end_date: "" });
-                  }}
-                  className={`w-full rounded px-3 py-2 border text-sm outline-none transition-all focus:ring-1 focus:ring-[var(--brand-light)] ${
-                    errors.end_date ? "border-red-500" : "border-gray-300"
-                  }`}
-                />
-                {errors.end_date && (
-                  <p className="mt-1 text-xs text-red-500">{errors.end_date}</p>
-                )}
-              </div>
             </div>
 
-            <div className="flex justify-end gap-2 mt-6">
-              <Button
-                variant="outline"
-                onClick={() => setOpenCreateModal(false)}
-              >
-                Batal
-              </Button>
-              <Button
-                onClick={handleCreateEventGroup}
-                disabled={loadingCreate}
-                className="text-white"
-                style={{ backgroundColor: "var(--brand-primary)" }}
-              >
-                {loadingCreate ? "Menyimpan..." : "Simpan"}
-              </Button>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Tanggal Mulai</label>
+              <Input
+                type="datetime-local"
+                value={form.start_date}
+                onChange={(e) => {
+                  setForm({ ...form, start_date: e.target.value });
+                  setErrors({ ...errors, start_date: "" });
+                }}
+                className={errors.start_date ? "border-red-500" : ""}
+              />
+              {errors.start_date && (
+                <p className="mt-1 text-xs text-red-500">
+                  {errors.start_date}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Tanggal Selesai</label>
+              <Input
+                type="datetime-local"
+                value={form.end_date}
+                onChange={(e) => {
+                  setForm({ ...form, end_date: e.target.value });
+                  setErrors({ ...errors, end_date: "" });
+                }}
+                className={errors.end_date ? "border-red-500" : ""}
+              />
+              {errors.end_date && (
+                <p className="mt-1 text-xs text-red-500">{errors.end_date}</p>
+              )}
             </div>
           </div>
-        </div>
-      )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setOpenCreateModal(false)}
+            >
+              Batal
+            </Button>
+            <Button
+              onClick={handleCreateEventGroup}
+              disabled={loadingCreate}
+              className="text-white"
+              style={{ backgroundColor: "var(--brand-primary)" }}
+            >
+              {loadingCreate ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Menyimpan...
+                </>
+              ) : (
+                "Simpan"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog Konfirmasi Hapus Data */}
       <Dialog open={openDelete} onOpenChange={setOpenDelete}>
