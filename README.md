@@ -1,36 +1,59 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Event Platform - Frontend (FE)
 
-## Getting Started
+Welcome to the Frontend for the Event Platform V2! This frontend is built using Next.js 14+ (App Router), Tailwind CSS v4, and Shadcn UI, providing a modern, fast, and highly responsive user interface.
 
-First, run the development server:
+## Prerequisites
+
+Before running the application, make sure you have the following installed:
+- [Node.js](https://nodejs.org/) (v18 or above recommended)
+- The Backend API should be running concurrently to serve data.
+
+## Installation & Setup
+
+1. **Clone the repository** (if you haven't already).
+2. **Navigate to the frontend directory**:
+   ```bash
+   cd event-platform-fe
+   ```
+3. **Install dependencies**:
+   ```bash
+   npm install
+   ```
+4. **Environment Variables**:
+   Create a `.env.local` file (or copy from an example if provided) in the root of the `event-platform-fe` directory. You will typically need to configure the Backend API URL and NextAuth secrets. Example:
+   ```env
+   NEXT_PUBLIC_API_URL="http://localhost:3000/api"
+   NEXTAUTH_URL="http://localhost:3001"
+   NEXTAUTH_SECRET="your_nextauth_secret_key"
+   ```
+
+## Running the Development Server
+
+To start the Next.js development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+By default, the frontend will be available at [http://localhost:3000](http://localhost:3000) (if the backend is on `3000`, Next.js will usually fallback to `3001`, or you can start it on a specific port).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Open the URL in your browser to see the application.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Build for Production
 
-## Learn More
+To build the optimized production version of the frontend:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm run build
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+After building, you can start the production server with:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npm run start
+```
 
-## Deploy on Vercel
+## Useful Commands
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `npm run lint` - Run ESLint to catch formatting or linting issues.
+- `npm run dev` - Start development server.
