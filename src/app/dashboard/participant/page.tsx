@@ -1,29 +1,28 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import {
   Search,
   Plus,
   Import,
-  ChevronLeft,
-  ChevronRight,
   Eye,
   Loader2,
-  ArrowUpDown,
   FileSpreadsheet,
   Trash2,
   X,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { cn } from "@/lib/utils";
 import { usePermissions } from "@/hooks/usePermissions";
 import useSWR, { mutate } from "swr";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
 
+import DynamicModal from "@/components/ui/Dynamic-Modal";
 import { GET_PARTICIPANTS } from "@/lib/api-endpoints";
 
 interface Participant {
@@ -34,13 +33,46 @@ interface Participant {
   email: string;
 }
 
-// Interface untuk menampung pratinjau data Excel
 interface ExcelPreviewData {
   name: string;
   email: string;
   gender: string;
   company: string;
 }
+
+const fieldsParticipantManual = [
+  {
+    name: "name",
+    label: "Nama Lengkap",
+    placeholder: "Masukkan nama lengkap",
+  },
+  {
+    name: "email",
+    label: "Email",
+    placeholder: "Masukkan email",
+    type: "email" as const,
+  },
+  {
+    name: "gender",
+    label: "Jenis Kelamin",
+    type: "select" as const,
+    options: [
+      {
+        label: "Laki-laki",
+        value: "L",
+      },
+      {
+        label: "Perempuan",
+        value: "P",
+      },
+    ],
+  },
+  {
+    name: "company",
+    label: "Perusahaan",
+    placeholder: "Masukkan nama perusahaan",
+  },
+];
 
 export default function ParticipantPage() {
   const [keyword, setKeyword] = useState("");
@@ -50,6 +82,15 @@ export default function ParticipantPage() {
   const { data: getParticipant, isLoading } = useSWR(GET_PARTICIPANTS());
   const participant: Participant[] = getParticipant?.data ?? [];
 
+  // ─── STATE PAGINATION ──────────────────────────────────────────────────────
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  // Reset ke halaman 1 saat user melakukan pengetikan pencarian
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [keyword]);
+
   const filteredParticipant = participant.filter((item) =>
     [item.name, item.email, item.company]
       .join(" ")
@@ -57,14 +98,29 @@ export default function ParticipantPage() {
       .includes(keyword.toLowerCase()),
   );
 
+  // ─── LOGIKA PEMOTONGAN DATA (PAGINATION) ──────────────────────────────────
+  const totalItems = filteredParticipant.length;
+  const totalPage = Math.ceil(totalItems / itemsPerPage) || 1;
+
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredParticipant.slice(
+    indexOfFirstItem,
+    indexOfLastItem,
+  );
+
+  // Angka penunjuk (Contoh: Menampilkan 1 - 10 dari 25 data)
+  const displayFrom = totalItems === 0 ? 0 : indexOfFirstItem + 1;
+  const displayTo = indexOfLastItem > totalItems ? totalItems : indexOfLastItem;
+
   const data = {
-    data: filteredParticipant,
-    total: filteredParticipant.length,
-    totalPage: 1,
+    data: currentItems, // Menggunakan data yang sudah dipotong per 10 baris
+    total: totalItems,
   };
 
-  // State untuk Modal Create Manual
+  // State Modal Manual
   const [openCreateModal, setOpenCreateModal] = useState(false);
+
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -80,16 +136,13 @@ export default function ParticipantPage() {
     api: "",
   });
 
-  // ── STATE BARU UNTUK IMPORT EXCEL ───────────────────────────────────
+  // State Modal Import Excel
   const [openImportModal, setOpenImportModal] = useState(false);
   const [excelData, setExcelData] = useState<ExcelPreviewData[]>([]);
   const [loadingImport, setLoadingImport] = useState(false);
   const [fileName, setFileName] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  {
-    /* ── create participant integrasi ──────────────────────────────────── */
-  }
   const handleCreateParticipant = async () => {
     const newErrors = { name: "", email: "", gender: "", company: "", api: "" };
     if (!form.name.trim()) newErrors.name = "Nama wajib diisi";
@@ -133,8 +186,8 @@ export default function ParticipantPage() {
       }
 
       await mutate(GET_PARTICIPANTS());
-      setForm({ name: "", email: "", gender: "", company: "" });
-      setErrors({ name: "", email: "", gender: "", company: "", api: "" });
+      toast.success("Peserta baru berhasil ditambahkan!");
+      setForm({ name: "", email: "", gender: "L", company: "" });
       setOpenCreateModal(false);
     } catch (error: any) {
       setErrors((prev) => ({
@@ -146,61 +199,107 @@ export default function ParticipantPage() {
     }
   };
 
-  {
-    /* ── Import data excel ─────────────── */
-  }
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setFileName(file.name);
+
     const reader = new FileReader();
+
     reader.onload = (evt) => {
       try {
-        const bstr = evt.target?.result;
-        const wb = XLSX.read(bstr, { type: "binary" });
-        const wsname = wb.SheetNames[0];
-        const ws = wb.Sheets[wsname];
+        const dataStr = evt.target?.result;
 
-        const rawData = XLSX.utils.sheet_to_json(ws) as any[];
+        const workbook = XLSX.read(dataStr, {
+          type: "binary",
+        });
 
-        // Pemetaan Header Excel ke State Preview (Mendukung Bahasa Indonesia & Inggris)
-        const formatted = rawData.map((row) => ({
-          name: row["Nama"] || row["name"] || "",
-          email: row["Email"] || row["email"] || "",
-          gender:
-            row["Jenis Kelamin"] === "Laki-laki" ||
-            row["gender"] === "L" ||
-            row["Jenis Kelamin"] === "L"
-              ? "L"
-              : "P",
-          company: row["Perusahaan"] || row["company"] || "",
-        }));
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
 
-        if (formatted.length === 0) {
-          toast.warning("File Excel terbaca namun tidak ada data di dalamnya.");
+        const rawData = XLSX.utils.sheet_to_json<Record<string, any>>(
+          worksheet,
+          {
+            defval: "",
+          },
+        );
+
+        const formatted: ExcelPreviewData[] = rawData.map((row) => {
+          const normalized: Record<string, any> = {};
+
+          Object.keys(row).forEach((key) => {
+            normalized[key.toLowerCase().trim()] = row[key];
+          });
+
+          const genderValue = String(
+            normalized["jenis kelamin"] ||
+              normalized["gender"] ||
+              normalized["jk"] ||
+              "",
+          )
+            .trim()
+            .toLowerCase();
+
+          return {
+            name:
+              normalized["nama"] ||
+              normalized["nama lengkap"] ||
+              normalized["fullname"] ||
+              normalized["full name"] ||
+              normalized["name"] ||
+              "",
+
+            email:
+              normalized["email"] ||
+              normalized["e-mail"] ||
+              normalized["email address"] ||
+              "",
+
+            gender:
+              genderValue === "l" ||
+              genderValue === "laki-laki" ||
+              genderValue === "laki laki" ||
+              genderValue === "male"
+                ? "L"
+                : "P",
+
+            company:
+              normalized["perusahaan"] ||
+              normalized["company"] ||
+              normalized["instansi"] ||
+              normalized["organisasi"] ||
+              "",
+          };
+        });
+
+        const validData = formatted.filter(
+          (item) => item.name || item.email || item.company,
+        );
+
+        if (validData.length === 0) {
+          toast.error(
+            "Tidak ditemukan data yang valid. Periksa format header Excel.",
+          );
           return;
         }
 
-        setExcelData(formatted);
-        toast.info(
-          `Berhasil memuat ${formatted.length} baris dari file Excel.`,
+        setExcelData(validData);
+
+        toast.success(
+          `${validData.length} data berhasil dibaca dari file Excel.`,
         );
-      } catch (err) {
-        toast.error("Gagal membaca file Excel. Pastikan formatnya benar.");
+      } catch (error) {
+        console.error(error);
+        toast.error("Gagal membaca file Excel.");
       }
     };
+
     reader.readAsBinaryString(file);
   };
 
-  {
-    /* ── Send Ke API ────────────────── */
-  }
   const handleSaveImportedData = async () => {
-    if (excelData.length === 0) {
-      alert("Tidak ada data untuk disimpan.");
-      return;
-    }
+    if (excelData.length === 0) return;
 
     setLoadingImport(true);
     let successCount = 0;
@@ -224,17 +323,16 @@ export default function ParticipantPage() {
         if (res.ok) successCount++;
       }
 
-      alert(`Berhasil menyimpan ${successCount} data peserta ke database.`);
-      await mutate(GET_PARTICIPANTS()); // Refresh tabel utama
+      toast.success(`Berhasil menyimpan ${successCount} data peserta.`);
+      await mutate(GET_PARTICIPANTS());
       handleCloseImportModal();
     } catch (error) {
-      alert("Terjadi kesalahan saat mengunggah data.");
+      toast.error("Terjadi kesalahan saat mengunggah data.");
     } finally {
       setLoadingImport(false);
     }
   };
 
-  // Bersihkan state saat modal di-close
   const handleCloseImportModal = () => {
     setOpenImportModal(false);
     setExcelData([]);
@@ -244,7 +342,7 @@ export default function ParticipantPage() {
 
   return (
     <div className="flex flex-col space-y-7 md:space-y-10 pb-20 md:pb-0">
-      {/* ── Filters + Summary Cards ──────────────────────────────────── */}
+      {/* Summary Cards */}
       <div className="flex flex-col space-y-6">
         <div className="flex flex-col space-y-3 sm:space-x-4 sm:flex-row sm:space-y-0">
           <Card className="w-full sm:w-1/3 lg:w-1/4 border-l-4 border-l-[var(--brand-primary)] shadow-sm">
@@ -263,7 +361,7 @@ export default function ParticipantPage() {
         </div>
       </div>
 
-      {/* ── Sort + Table ─────────────────────────────────────────────── */}
+      {/* Table Container */}
       <div className="card-base card-border-primary overflow-hidden">
         <div className="p-5 border-b border-gray-100 bg-white flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <h2
@@ -274,7 +372,7 @@ export default function ParticipantPage() {
           </h2>
 
           <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-            {/* Search */}
+            {/* Search Input */}
             <div className="relative w-full sm:w-64">
               <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                 <Search className="w-4 h-4 text-gray-400" />
@@ -290,21 +388,17 @@ export default function ParticipantPage() {
             </div>
 
             {can("participantCreate") && (
-              <Button
-                onClick={() => setOpenCreateModal(true)}
-                className="whitespace-nowrap w-full sm:w-auto"
-                style={{ backgroundColor: "var(--brand-primary)" }}
-              >
+              <Button size="lg" onClick={() => setOpenCreateModal(true)}>
                 <Plus className="w-4 h-4 mr-1" />
                 Tambah Peserta
               </Button>
             )}
 
-            {/* Tombol Import memicu Modal Pop-up */}
             <Button
               variant="outline"
+              size="lg"
               onClick={() => setOpenImportModal(true)}
-              className="whitespace-nowrap w-full sm:w-auto text-green-700 border-green-300 hover:bg-green-50"
+              className="text-green-700 border-green-300 hover:bg-green-50"
             >
               <Import className="w-4 h-4 mr-1" />
               Import Excel
@@ -312,7 +406,7 @@ export default function ParticipantPage() {
           </div>
         </div>
 
-        {/* Data Table Utama */}
+        {/* Data Table */}
         <div className="relative overflow-x-auto">
           <table className="table-base w-full border-none">
             <thead className="table-header bg-gray-50/50">
@@ -320,19 +414,19 @@ export default function ParticipantPage() {
                 <th className="px-5 py-4 w-12 border-b">
                   <Checkbox />
                 </th>
-                <th className="px-5 py-4 whitespace-nowrap text-xs uppercase tracking-wider text-gray-500 font-semibold border-b">
+                <th className="px-5 py-4 text-left text-xs uppercase tracking-wider text-gray-500 font-semibold border-b">
                   Nama
                 </th>
-                <th className="px-5 py-4 whitespace-nowrap text-xs uppercase tracking-wider text-gray-500 font-semibold border-b">
+                <th className="px-5 py-4 text-left text-xs uppercase tracking-wider text-gray-500 font-semibold border-b">
                   Jenis Kelamin
                 </th>
-                <th className="px-5 py-4 whitespace-nowrap text-xs uppercase tracking-wider text-gray-500 font-semibold border-b">
+                <th className="px-5 py-4 text-left text-xs uppercase tracking-wider text-gray-500 font-semibold border-b">
                   Perusahaan
                 </th>
-                <th className="px-5 py-4 whitespace-nowrap text-xs uppercase tracking-wider text-gray-500 font-semibold border-b">
+                <th className="px-5 py-4 text-left text-xs uppercase tracking-wider text-gray-500 font-semibold border-b">
                   Email
                 </th>
-                <th className="px-5 py-4 whitespace-nowrap text-xs uppercase tracking-wider text-gray-500 font-semibold border-b text-right">
+                <th className="px-5 py-4 text-right text-xs uppercase tracking-wider text-gray-500 font-semibold border-b">
                   Opsi
                 </th>
               </tr>
@@ -342,6 +436,17 @@ export default function ParticipantPage() {
                 <tr>
                   <td colSpan={6} className="h-32 text-center">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto text-gray-400" />
+                  </td>
+                </tr>
+              )}
+
+              {!isLoading && data?.data?.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={6}
+                    className="h-32 text-center text-gray-500 text-sm"
+                  >
+                    Tidak ada data peserta ditemukan.
                   </td>
                 </tr>
               )}
@@ -374,7 +479,7 @@ export default function ParticipantPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="h-8 border-gray-200"
+                        className="border-gray-200"
                       >
                         <Eye className="w-3.5 h-3.5 mr-1.5" /> Detail
                       </Button>
@@ -384,13 +489,49 @@ export default function ParticipantPage() {
             </tbody>
           </table>
         </div>
+
+        {/* ─── FITUR PAGINATION FOOTER ────────────────────────────────────── */}
+        <div className="p-4 border-t border-gray-100 bg-gray-50/30 flex items-center justify-between">
+          <p className="text-sm text-gray-500 hidden sm:block">
+            Menampilkan{" "}
+            <span className="font-medium text-gray-900">
+              {displayFrom} - {displayTo}
+            </span>{" "}
+            dari <span className="font-medium text-gray-900">{totalItems}</span>{" "}
+            data
+          </p>
+          <div className="flex items-center space-x-2 w-full sm:w-auto justify-center sm:justify-end">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 px-2 border-gray-200 bg-white"
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+            <span className="text-sm text-gray-600 font-medium min-w-[3rem] text-center">
+              {currentPage} / {totalPage}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 px-2 border-gray-200 bg-white"
+              onClick={() =>
+                setCurrentPage((prev) => Math.min(prev + 1, totalPage))
+              }
+              disabled={currentPage === totalPage}
+            >
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
       </div>
 
-      {/* ── INTERFACES BARU: POP-UP IMPORT EXCEL + PREVIEW TABLE ────────────────── */}
+      {/* Modal Import Excel */}
       {openImportModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white rounded-xl w-full max-w-4xl max-h-[85vh] flex flex-col shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            {/* Header Modal */}
             <div className="p-5 border-b flex items-center justify-between bg-gray-50">
               <div>
                 <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
@@ -402,18 +543,18 @@ export default function ParticipantPage() {
                   Perusahaan
                 </p>
               </div>
-              <button
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={handleCloseImportModal}
-                className="p-1.5 hover:bg-gray-200 rounded-full transition-colors"
+                className="rounded-full"
               >
                 <X className="w-5 h-5 text-gray-500" />
-              </button>
+              </Button>
             </div>
 
-            {/* Konten Utama Modal */}
             <div className="p-6 flex-1 overflow-y-auto space-y-6">
-              {/* Slot Upload File */}
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:bg-gray-50/70 transition-colors cursor-pointer relative group">
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:bg-gray-50/70 transition-colors relative group">
                 <input
                   type="file"
                   ref={fileInputRef}
@@ -434,7 +575,6 @@ export default function ParticipantPage() {
                 </div>
               </div>
 
-              {/* Preview Tabel Data Excel */}
               {excelData.length > 0 && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
@@ -448,12 +588,11 @@ export default function ParticipantPage() {
                         setExcelData([]);
                         setFileName("");
                       }}
-                      className="text-red-600 hover:bg-red-50 text-xs h-8"
+                      className="text-red-600 hover:bg-red-50 text-xs"
                     >
                       <Trash2 className="w-3.5 h-3.5 mr-1" /> Bersihkan
                     </Button>
                   </div>
-
                   <div className="border rounded-lg overflow-hidden max-h-[350px] overflow-y-auto">
                     <table className="w-full text-left text-sm border-collapse">
                       <thead className="bg-gray-100 text-gray-600 sticky top-0 border-b font-semibold text-xs uppercase tracking-wider">
@@ -505,10 +644,10 @@ export default function ParticipantPage() {
               )}
             </div>
 
-            {/* Footer Modal Action */}
             <div className="p-4 border-t bg-gray-50 flex justify-end gap-3">
               <Button
                 variant="outline"
+                size="lg"
                 onClick={handleCloseImportModal}
                 disabled={loadingImport}
               >
@@ -517,16 +656,15 @@ export default function ParticipantPage() {
               <Button
                 onClick={handleSaveImportedData}
                 disabled={loadingImport || excelData.length === 0}
-                className="text-white"
-                style={{ backgroundColor: "var(--brand-primary)" }}
+                size="lg"
               >
                 {loadingImport ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Menyimpan ({excelData.length} data)...
+                    Menyimpan...
                   </>
                 ) : (
-                  "Konfirmasi & Simpan Ke Database"
+                  "Konfirmasi & Simpan"
                 )}
               </Button>
             </div>
@@ -534,30 +672,44 @@ export default function ParticipantPage() {
         </div>
       )}
 
-      {/* Modal Create Manual Anda tetap berada utuh di sini */}
-      {openCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-lg w-full max-w-md p-6">
-            <h2 className="text-lg font-bold mb-4">Tambah Participant</h2>
-            {/* ... form fields seperti kode awal Anda ... */}
-            <div className="flex justify-end gap-2 mt-6">
-              <button
-                onClick={() => setOpenCreateModal(false)}
-                className="px-4 py-2 text-gray-600 rounded"
-              >
-                Batal
-              </button>
-              <button
-                onClick={handleCreateParticipant}
-                className="px-4 py-2 text-white rounded"
-                style={{ backgroundColor: "var(--brand-primary)" }}
-              >
-                {loadingCreate ? "Memproses..." : "Simpan"}
-              </button>
-            </div>
-          </div>
+      {/* ── REUSABLE DYNAMIC MODAL (DIPAKAI UNTUK MANUAL REGISTER) ── */}
+      <DynamicModal
+        title="Tambah Participant"
+        confirmLabel="Simpan"
+        showDates={false}
+        fields={fieldsParticipantManual}
+        formState={form}
+        setFormState={setForm}
+        errors={errors}
+        isOpen={openCreateModal}
+        isLoading={loadingCreate}
+        onClose={() => setOpenCreateModal(false)}
+        onConfirm={handleCreateParticipant}
+      >
+        <div>
+          <label className="block text-sm font-medium mb-1">
+            Jenis Kelamin
+          </label>
+
+          <select
+            value={form.gender}
+            onChange={(e) =>
+              setForm((prev) => ({
+                ...prev,
+                gender: e.target.value,
+              }))
+            }
+            className="w-full rounded-md px-3 py-2.5 border border-gray-300 text-sm"
+          >
+            <option value="L">Laki-laki</option>
+            <option value="P">Perempuan</option>
+          </select>
+
+          {errors.gender && (
+            <p className="mt-1 text-xs text-red-500">{errors.gender}</p>
+          )}
         </div>
-      )}
+      </DynamicModal>
     </div>
   );
 }
