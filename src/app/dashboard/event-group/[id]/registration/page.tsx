@@ -63,6 +63,7 @@ interface FormState {
   name: string;
   email: string;
   company: string;
+  gender: string;
 }
 
 // ─── Constants Configurations ───────────────────────────────────────────────
@@ -78,6 +79,15 @@ const fieldsTambahRegistrasi: DynamicField[] = [
     label: "Email",
     placeholder: "Masukkan alamat email",
     type: "email",
+  },
+  {
+    name: "gender",
+    label: "Jenis Kelamin",
+    type: "select",
+    options: [
+      { value: "L", label: "Laki-laki" },
+      { value: "P", label: "Perempuan" },
+    ],
   },
   {
     name: "company",
@@ -101,8 +111,13 @@ const detailFields: DynamicField[] = [
   },
 ];
 
-const initialFormState: FormState = { name: "", email: "", company: "" };
-const initialErrors = { name: "", email: "", company: "", api: "" };
+const initialFormState: FormState = {
+  name: "",
+  email: "",
+  company: "",
+  gender: "",
+};
+const initialErrors = { name: "", email: "", company: "", gender: "", api: "" };
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 export default function RegistrationDashboard() {
@@ -202,6 +217,8 @@ export default function RegistrationDashboard() {
     } else if (!/\S+@\S+\.\S+/.test(currentForm.email)) {
       newErrors.email = "Format email tidak valid";
     }
+    if (!currentForm.gender.trim())
+      newErrors.gender = "Jenis kelamin wajib dipilih";
     if (!currentForm.company.trim())
       newErrors.company = "Nama perusahaan wajib diisi";
     return newErrors;
@@ -224,7 +241,13 @@ export default function RegistrationDashboard() {
   const handleCreateRegistration = async () => {
     const newErrors = validateForm(form);
     setErrors(newErrors);
-    if (newErrors.name || newErrors.email || newErrors.company) return;
+    if (
+      newErrors.name ||
+      newErrors.email ||
+      newErrors.gender ||
+      newErrors.company
+    )
+      return;
 
     try {
       setLoadingCreate(true);
@@ -240,6 +263,7 @@ export default function RegistrationDashboard() {
             event_group_id: eventGroupId,
             name: form.name,
             email: form.email,
+            gender: form.gender,
             company: form.company,
           }),
         },

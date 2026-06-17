@@ -12,8 +12,8 @@ export const GET_EVENT_GROUP_DETAIL = (id: string) => `/event-groups/${id}`;
 export const GET_EVENTS_ALL = (eventGroupId?: string) =>
   `/events?event_group_id=${eventGroupId}`;
 
-export const POST_EVENTS = () => `events`;
-export const GET_EVENTS = () => `events`;
+export const POST_EVENTS = () => `/events`;
+export const GET_EVENTS = () => `/events`;
 
 export const MUTATE_EVENT = () => `/events`;
 export const MUTATE_EVENT_DETAIL = (id: string | number) => `/events/${id}`;
@@ -23,18 +23,15 @@ export const MUTATE_EVENT_DETAIL = (id: string | number) => `/events/${id}`;
 export const GET_REGISTRATIONS = (eventId?: number) =>
   eventId ? `/registrations?event_id=${eventId}` : `/registrations`;
 
-// Endpoint untuk mengambil semua registrasi berdasarkan Event Group ID
 export const GET_REGISTRATIONS_BY_GROUP = (eventGroupId: string) =>
   `/registrations?event_group_id=${eventGroupId}`;
 
-// Endpoint untuk mengambil semua registrasi berdasarkan Event ID biasa
 export const GET_REGISTRATIONS_BY_EVENT = (eventId: string | number) =>
   `/registrations?event_id=${eventId}`;
 
 // 1. Endpoint khusus untuk membuat (POST) Registrasi Baru
 export const POST_REGISTRATION = () => `/registrations`;
 
-// 2. (Opsional) Jika nanti butuh Mutasi/Detail per ID registrasi (PUT/DELETE)
 export const MUTATE_REGISTRATION_DETAIL = (id: string | number) =>
   `/registrations/${id}`;
 

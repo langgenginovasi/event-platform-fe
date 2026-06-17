@@ -40,7 +40,6 @@ const handler = NextAuth({
           const data = await res.json();
 
           if (res.ok && data.token) {
-            // Include role and token in the user object
             return {
               id: data.user.id.toString(),
               name: data.user.name,
@@ -74,7 +73,7 @@ const handler = NextAuth({
     },
   },
   pages: {
-    signIn: "/", // We are using the main page as the sign in page
+    signIn: "/",
   },
   session: {
     strategy: "jwt",

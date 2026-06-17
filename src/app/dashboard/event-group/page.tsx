@@ -59,16 +59,13 @@ export default function EventGroupPage() {
 
   const [keyword, setKeyword] = useState("");
 
-  // ── State Pagination ──────────────────────────────────
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  // Reset ke halaman 1 saat user melakukan pencarian
   useEffect(() => {
     setCurrentPage(1);
   }, [keyword]);
 
-  // ── State model create ──────────────────────────────
   const [openCreateModal, setOpenCreateModal] = useState(false);
   const [loadingCreate, setLoadingCreate] = useState(false);
   const [form, setForm] = useState({
@@ -83,13 +80,11 @@ export default function EventGroupPage() {
     api: "",
   });
 
-  // Hubungkan isLoading dengan useSWR agar loader tabel berfungsi dinamis
   const { data: eventGroupsRes, isLoading } = useSWR(GET_EVENT_GROUPS());
   const eventGroups = eventGroupsRes?.data ?? [];
   const totalEventGroups = eventGroups.length;
 
   {
-    /* ── fungsi integrasi tambah grup ───────────────────────────── */
   }
   const handleCreateEventGroup = async () => {
     const newErrors = {
@@ -164,7 +159,6 @@ export default function EventGroupPage() {
   };
 
   {
-    /* ──  Hapus integrasi grup event────────────────────────────── */
   }
   const handleDelete = async () => {
     if (!selectedId) return;
@@ -196,7 +190,6 @@ export default function EventGroupPage() {
     }
   };
 
-  // Filter semua data berdasarkan keyword search
   const filteredItems: EventItem[] = eventGroups
     .filter((item: any) => {
       const search = keyword.toLowerCase();
@@ -228,16 +221,13 @@ export default function EventGroupPage() {
       participants: item._count?.registrations ?? 0,
     }));
 
-  // ── Logika Client-Side Pagination ─────────────────────────
   const totalItems = filteredItems.length;
   const totalPage = Math.ceil(totalItems / itemsPerPage) || 1;
 
-  // Memotong data agar hanya menampilkan 10 data per halaman
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredItems.slice(indexOfFirstItem, indexOfLastItem);
 
-  // Menghitung info text (Contoh: Menampilkan 1 - 10 dari 25 data)
   const displayFrom = totalItems === 0 ? 0 : indexOfFirstItem + 1;
   const displayTo = indexOfLastItem > totalItems ? totalItems : indexOfLastItem;
 
