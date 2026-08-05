@@ -1,127 +1,43 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { Eye, ArrowDownToLine, ArrowUpFromLine, UserPlus } from "lucide-react";
+import { useParams } from "next/navigation";
+import {
+  Search,
+  Eye,
+  ArrowUpDown,
+  UserPlus,
+  Trash2,
+  Mail,
+  ChevronDown,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { TableCard } from "@/components/shared/CustomCards";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
-import { useParams } from "next/navigation";
 import { usePermissions } from "@/hooks/usePermissions";
-import { StatCard } from "@/components/dashboard/StatCard";
-import { TableToolbar } from "@/components/dashboard/TableToolbar";
-import { PaginationFooter } from "@/components/dashboard/PaginationFooter";
-import useSWR from "swr";
-import { useSession } from "next-auth/react";
-import { toast } from "sonner";
-import DynamicModal, { DynamicField } from "@/components/ui/Dynamic-Modal";
+import { StatCard } from "@/components/shared/StatCard";
+import { TableToolbar } from "@/components/shared/TableToolbar";
+import { PaginationFooter } from "@/components/shared/PaginationFooter";
+import { ConfirmationDialog } from "@/components/shared/ConfirmationDialog";
 
-// Import endpoint builders yang baru
+import { useRegistrationActions } from "@/hooks/useRegistrationActions";
 import {
-  GET_REGISTRATIONS_BY_GROUP,
-  POST_REGISTRATION,
-  GET_REGISTRATION_DETAIL_BY_PARTICIPANT,
-} from "@/lib/api-endpoints";
+  countEventsAttended,
+  isFullyCheckedIn,
+  isFullyCheckedOut,
+  hasNotCheckedIn,
+} from "@/lib/registration-helpers";
 
-// ─── Interfaces ────────────────────────────────────────────────────────────
-interface RegistrationResponse {
-  data: Array<{
-    id: string;
-    event_group_id: string;
-    participant_id: string;
-    qr_code: string;
-    status: string;
-    created_at: string;
-    participant: {
-      id: string;
-      name: string;
-      email: string;
-      gender: string;
-      company: string;
-    };
-    attendances: Array<{
-      id: string;
-      type: "checkin" | "checkout";
-      scanned_at: string;
-    }>;
-  }>;
-}
+import { BulkActionBar } from "@/components/features/workspace/Registration/BulkActionBar";
+import { AddParticipantModal } from "@/components/features/workspace/Registration/AddParticipantModal";
+import { CheckInEventModal } from "@/components/features/workspace/Registration/CheckInEventModal";
+import { DetailRegistrationModal } from "@/components/features/workspace/Registration/DetailRegistrationModal";
+import { SendEmailModal } from "@/components/features/workspace/Registration/SendEmailModal";
+import { TableBodyStates } from "@/components/shared/TableBodyStates";
 
-interface RegistrationItem {
-  id: string;
-  participant_id: string; // Ditambahkan untuk pelacakan detail API
-  fullname: string;
-  email: string;
-  jenis_kelamin: string;
-  company: string;
-  raw_check_in: string | null;
-  raw_check_out: string | null;
-  check_in_time: string;
-  check_out_time: string;
-}
-
-interface FormState {
-  name: string;
-  email: string;
-  company: string;
-  gender: string;
-}
-
-// ─── Constants Configurations ───────────────────────────────────────────────
-const fieldsTambahRegistrasi: DynamicField[] = [
-  {
-    name: "name",
-    label: "Nama Peserta",
-    placeholder: "Masukkan nama lengkap",
-    type: "text",
-  },
-  {
-    name: "email",
-    label: "Email",
-    placeholder: "Masukkan alamat email",
-    type: "email",
-  },
-  {
-    name: "gender",
-    label: "Jenis Kelamin",
-    type: "select",
-    options: [
-      { value: "L", label: "Laki-laki" },
-      { value: "P", label: "Perempuan" },
-    ],
-  },
-  {
-    name: "company",
-    label: "Perusahaan / Instansi",
-    placeholder: "Masukkan nama perusahaan",
-    type: "text",
-  },
-];
-
-// Konfigurasi field detail untuk menampilkan informasi murni dari data Anda
-const detailFields: DynamicField[] = [
-  { name: "name", label: "Nama Lengkap", type: "text" },
-  { name: "email", label: "Email", type: "text" },
-  { name: "company", label: "Perusahaan / Instansi", type: "text" },
-  { name: "event_group_name", label: "Grup Event Terdaftar", type: "text" },
-  { name: "status", label: "Status Registrasi", type: "text" },
-  {
-    name: "total_attendances",
-    label: "Total Presensi Scanned",
-    type: "number",
-  },
-];
-
-const initialFormState: FormState = {
-  name: "",
-  email: "",
-  company: "",
-  gender: "",
-};
-const initialErrors = { name: "", email: "", company: "", gender: "", api: "" };
-
-// ─── Main Component ──────────────────────────────────────────────────────────
-export default function RegistrationDashboard() {
-  const params = useParams();
+export default function RegistrationPage() {
+  const { id } = useParams() as { id: string };
   const { can } = usePermissions();
   const { data: session } = useSession();
 
@@ -144,370 +60,332 @@ export default function RegistrationDashboard() {
   const [form, setForm] = useState<FormState>(initialFormState);
   const [errors, setErrors] = useState(initialErrors);
 
-  // States Modal Detail
-  const [openDetailModal, setOpenDetailModal] = useState(false);
-  const [loadingDetail, setLoadingDetail] = useState(false);
-  const [detailForm, setDetailForm] = useState({
-    name: "",
-    email: "",
-    company: "",
-    event_group_name: "",
-    status: "",
-    total_attendances: "",
-  });
-
-  // ─── Data Mapping ──────────────────────────────────────────────────────────
-  const participants = useMemo<RegistrationItem[]>(() => {
-    return (
-      serverData?.data?.map((item) => {
-        const attendances = item.attendances ?? [];
-        const checkInItem = attendances.find((a) => a.type === "checkin");
-        const checkOutItem = attendances.find((a) => a.type === "checkout");
-
-        const genderMap: Record<string, string> = {
-          L: "Laki-laki",
-          P: "Perempuan",
-        };
-
-        return {
-          id: item.id,
-          participant_id: item.participant_id,
-          fullname: item.participant?.name || "Tanpa Nama",
-          email: item.participant?.email || "-",
-          jenis_kelamin: genderMap[item.participant?.gender] || "-",
-          company: item.participant?.company || "-",
-          raw_check_in: checkInItem?.scanned_at ?? null,
-          raw_check_out: checkOutItem?.scanned_at ?? null,
-          check_in_time: checkInItem?.scanned_at
-            ? new Date(checkInItem.scanned_at).toLocaleTimeString("id-ID", {
-                hour: "2-digit",
-                minute: "2-digit",
-              })
-            : "-",
-          check_out_time: checkOutItem?.scanned_at
-            ? new Date(checkOutItem.scanned_at).toLocaleTimeString("id-ID", {
-                hour: "2-digit",
-                minute: "2-digit",
-              })
-            : "-",
-        };
-      }) || []
-    );
-  }, [serverData]);
-
-  const filteredParticipants = useMemo(() => {
-    return participants.filter((p) => {
-      return (
-        p.fullname.toLowerCase().includes(keyword.toLowerCase()) ||
-        p.company.toLowerCase().includes(keyword.toLowerCase())
-      );
-    });
-  }, [participants, keyword]);
-
-  const totalRegistrasi = participants.length;
-  const totalCheckIn = participants.filter((p) => p.raw_check_in).length;
-  const totalCheckOut = participants.filter((p) => p.raw_check_out).length;
-
-  // ─── Form Helpers ──────────────────────────────────────────────────────────
-  const validateForm = (currentForm: FormState) => {
-    const newErrors = { ...initialErrors };
-    if (!currentForm.name.trim()) newErrors.name = "Nama wajib diisi";
-    if (!currentForm.email.trim()) {
-      newErrors.email = "Email wajib diisi";
-    } else if (!/\S+@\S+\.\S+/.test(currentForm.email)) {
-      newErrors.email = "Format email tidak valid";
-    }
-    if (!currentForm.gender.trim())
-      newErrors.gender = "Jenis kelamin wajib dipilih";
-    if (!currentForm.company.trim())
-      newErrors.company = "Nama perusahaan wajib diisi";
-    return newErrors;
-  };
-
-  const handleSetFormState = (callbackOrValue: any) => {
-    if (typeof callbackOrValue === "function") {
-      setForm((prev) => {
-        const nextState = callbackOrValue(prev);
-        setErrors(validateForm(nextState));
-        return nextState;
-      });
-    } else {
-      setForm(callbackOrValue);
-      setErrors(validateForm(callbackOrValue));
-    }
-  };
-
-  // ─── Action Handlers ───────────────────────────────────────────────────────
-  const handleCreateRegistration = async () => {
-    const newErrors = validateForm(form);
-    setErrors(newErrors);
-    if (
-      newErrors.name ||
-      newErrors.email ||
-      newErrors.gender ||
-      newErrors.company
-    )
-      return;
-
-    try {
-      setLoadingCreate(true);
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}${POST_REGISTRATION()}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session?.user?.accessToken}`,
-          },
-          body: JSON.stringify({
-            event_group_id: eventGroupId,
-            name: form.name,
-            email: form.email,
-            gender: form.gender,
-            company: form.company,
-          }),
-        },
-      );
-
-      const response = await res.json();
-      if (!res.ok) {
-        setErrors((prev) => ({
-          ...prev,
-          api: response?.message || "Gagal membuat registrasi",
-        }));
-        return;
-      }
-
-      await mutate();
-      toast.success("Peserta baru berhasil diregistrasikan!");
-      setOpenCreateModal(false);
-      setForm(initialFormState);
-    } catch (error: any) {
-      toast.error("Terjadi kesalahan sistem.");
-    } finally {
-      setLoadingCreate(false);
-    }
-  };
-
-  // Handler Detail Baru Berbasis participant_id Array Response
-  const handleOpenDetail = async (participantId: string) => {
-    try {
-      setLoadingDetail(true);
-      setOpenDetailModal(true);
-
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}${GET_REGISTRATION_DETAIL_BY_PARTICIPANT(participantId)}`,
-        {
-          headers: { Authorization: `Bearer ${session?.user?.accessToken}` },
-        },
-      );
-
-      const response = await res.json();
-      if (!res.ok) {
-        toast.error(response?.message || "Gagal mengambil detail");
-        setOpenDetailModal(false);
-        return;
-      }
-
-      // Ambil indeks pertama dari array data response
-      const regData = response?.data?.[0];
-
-      if (regData) {
-        setDetailForm({
-          name: regData.participant?.name || "-",
-          email: regData.participant?.email || "-",
-          company: regData.participant?.company || "-",
-          event_group_name: regData.event_group?.name || "-",
-          status: regData.status || "-",
-          total_attendances:
-            regData._count?.attendances !== undefined
-              ? `${regData._count.attendances} Kali`
-              : "0 Kali",
-        });
-      }
-    } catch (err) {
-      toast.error("Terjadi kesalahan sistem.");
-      setOpenDetailModal(false);
-    } finally {
-      setLoadingDetail(false);
-    }
-  };
+  const reg = useRegistrationActions(id);
 
   return (
     <div className="flex flex-col space-y-7 md:space-y-10 pb-20 md:pb-0">
-      {/* STAT CARDS */}
-      <div className="flex flex-col space-y-6">
-        <div className="flex flex-col sm:flex-row sm:space-x-4 sm:space-y-0 space-y-3">
-          <StatCard title="Total Registrasi" value={totalRegistrasi} />
-          <StatCard title="Total Check In" value={totalCheckIn} />
-          <StatCard title="Total Check Out" value={totalCheckOut} />
+      {/* ── Summary Cards ──────────────────────────────────────────── */}
+      <div className="flex flex-col space-y-3 sm:space-x-4 sm:flex-row sm:space-y-0">
+        <div className="w-full sm:w-1/3 lg:w-1/4">
+          <StatCard title="Total Registrasi" value={reg.allRegistrationsRes?.meta?.total || reg.allRegistrations.length || 0} />
+        </div>
+        <div className="w-full sm:w-1/3 lg:w-1/4">
+          <StatCard
+            title="Total Hadir"
+            value={
+              reg.allRegistrations.filter((p) => countEventsAttended(p.attendances) > 0).length
+            }
+            borderLeftColorClass="border-l-emerald-500"
+            valueColorClass="text-emerald-600"
+          />
+        </div>
+        <div className="w-full sm:w-1/3 lg:w-1/4">
+          <StatCard
+            title="Belum Hadir"
+            value={
+              reg.allRegistrations.filter((p) => countEventsAttended(p.attendances) === 0).length
+            }
+            borderLeftColorClass="border-l-rose-500"
+            valueColorClass="text-rose-600"
+          />
         </div>
       </div>
 
-      {/* TABLE DATA */}
-      <div className="card-base card-border-primary overflow-hidden">
+      {/* ── Data Table ─────────────────────────────────────────────── */}
+      <TableCard>
         <TableToolbar
           title="Registrasi Peserta"
-          keyword={keyword}
-          setKeyword={setKeyword}
-          searchPlaceholder="Cari nama atau perusahaan..."
+          keyword={reg.keyword}
+          setKeyword={reg.setKeyword}
+          searchPlaceholder="Cari peserta (nama / email)..."
           actionButton={
             can("registrationManage") && (
-              <Button onClick={() => setOpenCreateModal(true)}>
-                <UserPlus className="w-4 h-4 mr-1" /> Tambah Registrasi
+              <Button
+                onClick={() => reg.handleOpenAddModal()}
+                className="whitespace-nowrap w-full"
+              >
+                <UserPlus className="w-4 h-4 mr-1" />
+                Tambah Peserta
               </Button>
             )
           }
         />
 
+        <BulkActionBar
+          selectedCount={reg.selectedIds.length}
+          onSendEmail={reg.handleBulkSendEmail}
+          onCheckIn={reg.handleBulkCheckIn}
+          onCheckOut={reg.handleBulkCheckOut}
+          onDelete={reg.handleBulkDelete}
+        />
+
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-gray-50/50">
-                <th className="px-5 py-4 border-b w-10">
-                  <Checkbox />
-                </th>
-                <th className="px-5 py-4 border-b">Nama</th>
-                <th className="px-5 py-4 border-b">L/P</th>
-                <th className="px-5 py-4 border-b">Perusahaan</th>
-                <th className="px-5 py-4 border-b">Check In</th>
-                <th className="px-5 py-4 border-b">Check Out</th>
-                <th className="px-5 py-4 border-b text-right">Aksi</th>
-              </tr>
-            </thead>
+          <Table>
+            <TableHeader className="bg-slate-50">
+              <TableRow>
+                <TableHead className="w-12 text-center">
+                  <Checkbox
+                    checked={
+                      !!(
+                        reg.data?.data &&
+                        reg.data.data.length > 0 &&
+                        reg.selectedIds.length === reg.data.data.length
+                      )
+                    }
+                    onCheckedChange={(checked) => reg.handleSelectAll(reg.data?.data ?? [], checked as boolean)}
+                  />
+                </TableHead>
+                <TableHead
+                  onClick={() => reg.handleSort("name")}
+                  className="cursor-pointer group"
+                >
+                  <div className="flex items-center">
+                    Nama Peserta{" "}
+                    <ArrowUpDown
+                      className={cn(
+                        "ml-2 h-3.5 w-3.5 transition-opacity",
+                        reg.sortField === "name" ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                      )}
+                    />
+                  </div>
+                </TableHead>
+                <TableHead
+                  onClick={() => reg.handleSort("gender")}
+                  className="cursor-pointer group"
+                >
+                  <div className="flex items-center">
+                    L/P{" "}
+                    <ArrowUpDown
+                      className={cn(
+                        "ml-2 h-3.5 w-3.5 transition-opacity",
+                        reg.sortField === "gender"
+                          ? "opacity-100"
+                          : "opacity-0 group-hover:opacity-100"
+                      )}
+                    />
+                  </div>
+                </TableHead>
+                <TableHead
+                  onClick={() => reg.handleSort("company")}
+                  className="cursor-pointer group"
+                >
+                  <div className="flex items-center">
+                    Perusahaan{" "}
+                    <ArrowUpDown
+                      className={cn(
+                        "ml-2 h-3.5 w-3.5 transition-opacity",
+                        reg.sortField === "company"
+                          ? "opacity-100"
+                          : "opacity-0 group-hover:opacity-100"
+                      )}
+                    />
+                  </div>
+                </TableHead>
+                <TableHead>
+                  <div className="flex items-center text-muted-foreground">Kehadiran</div>
+                </TableHead>
+                <TableHead className="text-right">Opsi</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableBodyStates isLoading={reg.isLoading} isEmpty={!reg.data?.data || reg.data.data.length === 0} colSpan={6} emptyMessage="Tidak ada data peserta terdaftar" />
 
-            <tbody className="divide-y">
-              {isLoading && (
-                <tr>
-                  <td colSpan={7} className="text-center h-32 text-gray-500">
-                    Membuka data...
-                  </td>
-                </tr>
-              )}
-              {error && (
-                <tr>
-                  <td colSpan={7} className="text-center text-red-500 h-32">
-                    Gagal memuat data dari server.
-                  </td>
-                </tr>
-              )}
-              {!isLoading && !error && filteredParticipants.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="text-center text-gray-400 h-32">
-                    Tidak ada data peserta ditemukan.
-                  </td>
-                </tr>
-              )}
+              {!reg.isLoading &&
+                reg.data?.data?.map((r) => {
+                  const eventsAttended = countEventsAttended(r.attendances);
+                  const isSelected = reg.selectedIds.includes(r.id);
+                  const checkinDone = isFullyCheckedIn(r.attendances, reg.totalEvents);
+                  const checkoutDone = isFullyCheckedOut(r.attendances, reg.totalEvents);
+                  const noCheckinYet = hasNotCheckedIn(r.attendances);
 
-              {!isLoading &&
-                !error &&
-                filteredParticipants.map((p) => (
-                  <tr key={p.id} className="hover:bg-gray-50/50">
-                    <td className="px-5 py-4">
-                      <Checkbox />
-                    </td>
-                    <td className="px-5 py-4">
-                      <div className="font-semibold">{p.fullname}</div>
-                      <div className="text-xs text-gray-400">{p.email}</div>
-                    </td>
-                    <td className="px-5 py-4">{p.jenis_kelamin}</td>
-                    <td className="px-5 py-4">{p.company}</td>
-                    <td className="px-5 py-4 font-mono text-sm">
-                      {p.check_in_time}
-                    </td>
-                    <td className="px-5 py-4 font-mono text-sm">
-                      {p.check_out_time}
-                    </td>
-                    <td className="px-5 py-4 text-right space-x-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleOpenDetail(p.participant_id)}
-                      >
-                        <Eye className="w-3 h-3 mr-1" /> Detail
-                      </Button>
-
-                      <Button
-                        size="sm"
-                        variant={p.raw_check_in ? "secondary" : "default"}
-                        className={cn(
-                          !p.raw_check_in &&
-                            "bg-green-600 hover:bg-green-700 text-white",
+                  return (
+                    <TableRow
+                      key={r.id}
+                      className={cn(isSelected && "bg-blue-50/50 hover:bg-blue-50/70")}
+                    >
+                      <TableCell className="text-center">
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={(checked) =>
+                            reg.handleSelectOne(r.id, checked as boolean)
+                          }
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-semibold text-foreground">
+                            {r.participant.name}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {r.participant.email}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground capitalize">
+                        {r.participant.gender}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {r.participant.company}
+                      </TableCell>
+                      <TableCell>
+                        {reg.totalEvents > 0 ? (
+                          <span
+                            className={cn(
+                              "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold",
+                              eventsAttended > 0
+                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                : "bg-gray-50 text-gray-500 border border-gray-200"
+                            )}
+                          >
+                            {eventsAttended}/{reg.totalEvents} event
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">-</span>
                         )}
-                        disabled={!!p.raw_check_in}
-                      >
-                        <ArrowDownToLine className="w-3 h-3 mr-1" /> In
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant={p.raw_check_out ? "secondary" : "default"}
-                        className={cn(
-                          !p.raw_check_out &&
-                            "bg-red-600 hover:bg-red-700 text-white",
-                        )}
-                        disabled={!!p.raw_check_out}
-                      >
-                        <ArrowUpFromLine className="w-3 h-3 mr-1" /> Out
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              reg.setSelectedRegistrationId(r.id);
+                              reg.setIsDetailModalOpen(true);
+                            }}
+                          >
+                            <Eye className="w-3.5 h-3.5 mr-1.5" />
+                            Detail
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-blue-600 border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+                            onClick={() => reg.handleSingleSendEmail(r.id)}
+                            title="Kirim Email Tiket"
+                          >
+                            <Mail className="w-3.5 h-3.5" />
+                          </Button>
+                          {can("registrationManage") && (
+                            <>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-emerald-600 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
+                                onClick={() => reg.handleManualCheckIn(r.id)}
+                                disabled={checkinDone}
+                                title={checkinDone ? "Sudah check-in di semua event" : "Check In Manual"}
+                              >
+                                Check In
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-amber-600 border-amber-200 hover:bg-amber-50 hover:text-amber-700"
+                                onClick={() => reg.handleManualCheckOut(r.id)}
+                                disabled={checkoutDone || noCheckinYet}
+                                title={checkoutDone ? "Sudah check-out di semua event" : noCheckinYet ? "Belum check-in" : "Check Out Manual"}
+                              >
+                                Check Out
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-destructive border-destructive/20 hover:bg-destructive/10 hover:text-destructive"
+                                onClick={() => reg.handleDelete(r.id)}
+                                title="Hapus Registrasi"
+                              >
+                                <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                                Hapus
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+            </TableBody>
+          </Table>
         </div>
 
         <PaginationFooter
-          currentPage={1}
-          totalPage={1}
-          totalData={filteredParticipants.length}
-          onPrev={() => {}}
-          onNext={() => {}}
+          currentPage={reg.currentPage}
+          totalPage={reg.data?.meta?.total_pages || 1}
+          totalData={reg.data?.meta?.total || 0}
+          onPrev={() => reg.setCurrentPage((p) => Math.max(1, p - 1))}
+          onNext={() =>
+            reg.setCurrentPage((p) => Math.min(reg.data?.meta?.total_pages || 1, p + 1))
+          }
+          onPageChange={(page) => reg.setCurrentPage(page)}
         />
-      </div>
+      </TableCard>
 
-      {/* Modal Tambah Registrasi */}
-      <DynamicModal
-        title="Tambah Registrasi"
-        confirmLabel="Simpan"
-        showDates={false}
-        fields={fieldsTambahRegistrasi}
-        formState={form}
-        setFormState={handleSetFormState}
-        errors={errors}
-        isOpen={openCreateModal}
-        isLoading={loadingCreate}
-        onClose={() => {
-          setOpenCreateModal(false);
-          setForm(initialFormState);
-          setErrors(initialErrors);
-        }}
-        onConfirm={handleCreateRegistration}
+      {/* ── Modals ──────────────────────────────────────────────────── */}
+      <AddParticipantModal
+        open={reg.isAddModalOpen}
+        onOpenChange={reg.setIsAddModalOpen}
+        search={reg.addParticipantSearch}
+        onSearchChange={reg.setAddParticipantSearch}
+        participants={reg.unregisteredParticipants}
+        selectedIds={reg.addSelectedIds}
+        onToggleParticipant={reg.handleToggleAddParticipant}
+        onToggleAll={reg.handleToggleAllAddParticipants}
+        participationTypes={reg.participationTypes}
+        participationTypeId={reg.addParticipationTypeId}
+        onParticipationTypeChange={reg.setAddParticipationTypeId}
+        isRegistering={reg.isRegistering}
+        onRegister={reg.handleBulkRegister}
       />
 
-      {/* Modal Detail Registrasi (Murni Informasi Text) */}
-      <DynamicModal
-        mode="detail"
-        title="Detail Registrasi Peserta"
-        confirmLabel=""
-        showDates={false}
-        fields={detailFields}
-        formState={detailForm}
-        setFormState={() => {}}
-        errors={{}}
-        isOpen={openDetailModal}
-        isLoading={loadingDetail}
-        onClose={() => {
-          setOpenDetailModal(false);
-          setDetailForm({
-            name: "",
-            email: "",
-            company: "",
-            event_group_name: "",
-            status: "",
-            total_attendances: "",
-          });
-        }}
-        onConfirm={() => {}}
+      <CheckInEventModal
+        open={reg.isEventModalOpen}
+        onOpenChange={reg.setIsEventModalOpen}
+        action={reg.checkInAction.action}
+        selectedParticipant={reg.selectedParticipant}
+        events={reg.checkInEvents}
+        isLoadingEvents={reg.isLoadingEvents}
+        selectedEventId={reg.selectedEventId}
+        onEventChange={reg.setSelectedEventId}
+        attendanceStatus={reg.attendanceStatus}
+        isProcessing={reg.isCheckingIn}
+        onConfirm={reg.executeCheckIn}
+      />
+
+      <DetailRegistrationModal
+        open={reg.isDetailModalOpen}
+        onOpenChange={reg.setIsDetailModalOpen}
+        isLoading={reg.isLoadingDetail}
+        detail={reg.registrationDetail}
+        expandedEvents={reg.expandedEvents}
+        onToggleExpand={(eventId) =>
+          reg.setExpandedEvents((prev) => ({ ...prev, [eventId]: !prev[eventId] }))
+        }
+      />
+
+      <SendEmailModal
+        open={reg.isEmailModalOpen}
+        onOpenChange={reg.setIsEmailModalOpen}
+        targetCount={reg.emailTargetIds.length}
+        events={reg.checkInEvents}
+        selectedEventId={reg.selectedEmailEventId}
+        onEventChange={reg.setSelectedEmailEventId}
+        isSending={reg.isSendingEmail}
+        onConfirm={reg.handleConfirmSendEmail}
+      />
+
+      <ConfirmationDialog
+        open={reg.isDeleteModalOpen}
+        onOpenChange={reg.setIsDeleteModalOpen}
+        title="Hapus Registrasi"
+        description={
+          reg.deleteTargetId
+            ? "Apakah Anda yakin ingin menghapus registrasi ini? Tindakan ini tidak dapat dibatalkan."
+            : `Apakah Anda yakin ingin menghapus ${reg.deleteTargetIds.length} registrasi yang dipilih? Tindakan ini tidak dapat dibatalkan.`
+        }
+        confirmText="Hapus"
+        variant="danger"
+        isLoading={reg.isDeleting}
+        onConfirm={reg.handleConfirmDelete}
       />
     </div>
   );

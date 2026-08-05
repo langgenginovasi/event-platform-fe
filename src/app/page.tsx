@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { signIn, useSession } from "next-auth/react";
 import { Eye, EyeOff } from "lucide-react";
 import { useEffect } from "react";
+import Image from "next/image";
+import { Button } from "@/components/ui/button";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -56,34 +58,15 @@ export default function LoginPage() {
 
         <div className="relative z-10 flex flex-col items-center text-center w-full">
           {/* Logo placeholder */}
-          <div
-            className="mb-6 p-5 bg-white rounded-full shadow-xl"
-            style={{ boxShadow: "0 8px 32px rgba(0,0,0,0.25)" }}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="64"
-              height="64"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#001A41"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-              <line x1="16" y1="2" x2="16" y2="6" />
-              <line x1="8" y1="2" x2="8" y2="6" />
-              <line x1="3" y1="10" x2="21" y2="10" />
-            </svg>
+          <div className="mb-8 p-6 bg-white/10 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/20">
+            <Image
+              src="/logo-horizontal-white.png"
+              alt="Event Platform Logo"
+              width={280}
+              height={100}
+              className="object-contain"
+            />
           </div>
-
-          <h1 className="text-3xl lg:text-4xl font-extrabold tracking-wider text-white uppercase">
-            Event Platform
-          </h1>
-          <p className="text-sm font-medium text-sky-200 tracking-widest uppercase mt-2 max-w-sm">
-            Enterprise Management System
-          </p>
         </div>
       </div>
 
@@ -170,23 +153,11 @@ export default function LoginPage() {
 
             {/* Submit */}
             <div className="pt-2">
-              <button
+              <Button
                 type="submit"
                 disabled={loading}
-                className="w-full text-white font-semibold rounded-md text-sm py-3 px-5 text-center shadow-md transition-all active:scale-[0.99] flex items-center justify-center min-h-[44px] disabled:cursor-not-allowed"
-                style={{
-                  backgroundColor: loading ? "#9ca3af" : "var(--brand-primary)",
-                }}
-                onMouseEnter={(e) => {
-                  if (!loading)
-                    (e.currentTarget as HTMLButtonElement).style.backgroundColor =
-                      "var(--brand-light)";
-                }}
-                onMouseLeave={(e) => {
-                  if (!loading)
-                    (e.currentTarget as HTMLButtonElement).style.backgroundColor =
-                      "var(--brand-primary)";
-                }}
+                className="w-full"
+                size="lg"
               >
                 {loading ? (
                   <svg
@@ -212,7 +183,7 @@ export default function LoginPage() {
                 ) : (
                   "Masuk"
                 )}
-              </button>
+              </Button>
             </div>
           </form>
         </div>

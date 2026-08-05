@@ -1,59 +1,107 @@
-# Event Platform - Frontend (FE)
+# Event Platform Frontend (V2)
 
-Welcome to the Frontend for the Event Platform V2! This frontend is built using Next.js 14+ (App Router), Tailwind CSS v4, and Shadcn UI, providing a modern, fast, and highly responsive user interface.
+Frontend untuk **Event Platform V2** — sistem manajemen acara dan absensi digital berbasis *Event Group Workspace*. Repositori ini adalah pengganti frontend V1 (yang terikat dengan response Strapi) dengan arsitektur decoupled yang berkomunikasi dengan backend Fastify melalui REST API.
 
-## Prerequisites
+## Tech Stack
 
-Before running the application, make sure you have the following installed:
-- [Node.js](https://nodejs.org/) (v18 or above recommended)
-- The Backend API should be running concurrently to serve data.
+| Layer | Teknologi |
+|-------|-----------|
+| Framework | Next.js 16 App Router + TypeScript |
+| Styling | Tailwind CSS v4 + Glassmorphism UI |
+| Data Fetching | SWR + Axios |
+| Auth | NextAuth v4 (Credentials Provider, JWT) |
+| UI Components | shadcn/ui, @base-ui/react, lucide-react |
+| Chart & Export | Recharts, xlsx |
+| QR Scanner | html5-qrcode |
 
-## Installation & Setup
+## Prasyarat
 
-1. **Clone the repository** (if you haven't already).
-2. **Navigate to the frontend directory**:
-   ```bash
-   cd event-platform-fe
-   ```
-3. **Install dependencies**:
+- Node.js 20+
+- Backend **event-platform-be** sudah berjalan di `http://localhost:3001`
+
+## Setup Lokal
+
+1. Clone repo dan install dependencies:
+
    ```bash
    npm install
    ```
-4. **Environment Variables**:
-   Create a `.env.local` file (or copy from an example if provided) in the root of the `event-platform-fe` directory. You will typically need to configure the Backend API URL and NextAuth secrets. Example:
-   ```env
-   NEXT_PUBLIC_API_URL="http://localhost:3000/api"
-   NEXTAUTH_URL="http://localhost:3001"
-   NEXTAUTH_SECRET="your_nextauth_secret_key"
+
+2. Salin `.env.example` menjadi `.env` lalu sesuaikan:
+
+   ```bash
+   cp .env.example .env
    ```
 
-## Running the Development Server
+   ```env
+   NEXT_PUBLIC_API_URL="http://localhost:3001/api"
+   NEXTAUTH_SECRET="super-secret-nextauth-key-change-in-production"
+   NEXTAUTH_URL="http://localhost:3000"
+   ```
 
-To start the Next.js development server:
+   > Ganti `NEXT_PUBLIC_API_URL` dengan URL backend saat deployment.
 
-```bash
-npm run dev
+3. Jalankan development server:
+
+   ```bash
+   npm run dev
+   ```
+
+   Buka `http://localhost:3000` untuk mengakses aplikasi.
+
+## Scripts
+
+| Script | Deskripsi |
+|--------|-----------|
+| `npm run dev` | Development server dengan hot-reload |
+| `npm run build` | Production build |
+| `npm run start` | Menjalankan production build |
+| `npm run lint` | ESLint |
+
+## Struktur Folder
+
+```
+event-platform-fe/
+├── public/                        # Static assets
+├── src/
+│   ├── app/                       # Next.js App Router (routing)
+│   │   ├── layout.tsx             # Root layout (Server Component)
+│   │   ├── page.tsx               # Login page
+│   │   ├── globals.css            # Global styles
+│   │   ├── api/auth/[...nextauth]/route.ts   # NextAuth handler
+│   │   └── dashboard/             # Dashboard shell + feature pages
+│   ├── components/
+│   │   ├── ui/                    # Layer 1: shadcn/ui primitives
+│   │   ├── shared/                # Layer 2: App-wide reusable components
+│   │   └── features/              # Layer 3: Domain-specific components
+│   ├── hooks/                     # Custom React hooks (usePermissions, use*Actions)
+│   ├── lib/                       # API client, fetcher, api-endpoints, helpers
+│   └── types/                     # TypeScript type definitions
+└── docs/STRUCTURE.md              # Aturan struktur & coding patterns
 ```
 
-By default, the frontend will be available at [http://localhost:3000](http://localhost:3000) (if the backend is on `3000`, Next.js will usually fallback to `3001`, or you can start it on a specific port).
+## Fitur Dashboard
 
-Open the URL in your browser to see the application.
+Dashboard bersifat *context-aware* berdasarkan Event Group workspace:
 
-## Build for Production
+- **Event Group** — daftar & pembuatan Event Group (workspace)
+- **Workspace Overview** — statistik, chart, dan pengaturan email
+- **Registration** — registrasi peserta, bulk action, check-in/check-out, kirim email tiket QR
+- **Event & Session** — manajemen sub-event dan sesi
+- **Scan** — pemindaian QR code peserta dengan kamera
+- **Export** — ekspor data registrasi/absensi ke Excel
+- **Participant** — data master peserta (global)
+- **Users** — manajemen user (Super Admin)
+- **Settings** — akun, membership types, participation types
 
-To build the optimized production version of the frontend:
+## Akun Login
 
-```bash
-npm run build
-```
+Gunakan akun seed dari backend (password: `password123`):
 
-After building, you can start the production server with:
+- `superadmin@event.local` — SUPER_ADMIN
+- `admin@event.local` — EVENT_ADMIN
+- `operator@event.local` — OPERATOR
 
-```bash
-npm run start
-```
+## Lisensi
 
-## Useful Commands
-
-- `npm run lint` - Run ESLint to catch formatting or linting issues.
-- `npm run dev` - Start development server.
+TBD — kontak pemilik repositori untuk detail lisensi.

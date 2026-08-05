@@ -1,38 +1,52 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import axios from "axios";
+import { api } from "@/lib/api";
+import { extractApiError } from "@/lib/utils";
 import { Plus, Search, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { TableCard } from "@/components/shared/CustomCards";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { useSession } from "next-auth/react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ConfirmationDialog } from "@/components/shared/ConfirmationDialog";
+import { useDeleteConfirmation } from "@/hooks/useDeleteConfirmation";
+import { TableBodyStates } from "@/components/shared/TableBodyStates";
 
 interface User {
   id: string;
   name: string;
   email: string;
   role: string;
-  created_at: string;
 }
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const { data: session } = useSession();
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newUser, setNewUser] = useState({ name: "", email: "", password: "", role: "OPERATOR" });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // ── Delete ──────────────────────────────────────────────────────
+  const [deleteTargetName, setDeleteTargetName] = useState("");
+  const deleteConfirmation = useDeleteConfirmation({
+    onDelete: async (id) => {
+      await api.delete(`/users/${id}`);
+      fetchUsers();
+    },
+    successMessage: "Pengguna berhasil dihapus!",
+    errorMessage: "Gagal menghapus pengguna.",
+  });
 
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const res = await axios.get("http://localhost:3001/api/users", {
-        // withCredentials: true,
-        headers: {
-          Authorization: `Bearer ${session?.user?.accessToken}`,
-        },
-      });
-      setUsers(res.data.data);
+      const res = await api.get<{ data: User[] }>("/users");
+      setUsers(res.data);
     } catch (error) {
       console.error(error);
       toast.error(
@@ -53,6 +67,32 @@ export default function UsersPage() {
       u.email.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
+  const handleAddUser = async () => {
+    if (!newUser.name || !newUser.email || !newUser.password) {
+      toast.warning("Semua field harus diisi.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await api.post("/users", newUser);
+      toast.success("Pengguna berhasil ditambahkan!");
+      setShowAddModal(false);
+      setNewUser({ name: "", email: "", password: "", role: "OPERATOR" });
+      fetchUsers();
+    } catch (error: any) {
+      const message = extractApiError(error, "Gagal menambahkan pengguna.");
+      toast.error(message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteUser = (userId: string, userName: string) => {
+    setDeleteTargetName(userName);
+    deleteConfirmation.openDelete(userId);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -64,7 +104,7 @@ export default function UsersPage() {
             Kelola admin dan operator sistem.
           </p>
         </div>
-        <Button className="btn-primary gap-2 w-full md:w-auto shadow-md hover-lift">
+        <Button className="gap-2 w-full md:w-auto" onClick={() => setShowAddModal(true)}>
           <Plus className="w-4 h-4" /> Tambah Pengguna
         </Button>
       </div>
@@ -72,95 +112,142 @@ export default function UsersPage() {
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="card-base p-6 border-t-4 border-t-blue-600 rounded-xl"
       >
-        <div className="flex justify-between items-center mb-6">
-          <div className="relative w-full md:w-80">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <Input
-              placeholder="Cari nama atau email..."
-              className="pl-9 bg-gray-50 border-gray-200 focus-visible:ring-blue-600"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+        <TableCard className="p-6">
+          <div className="flex justify-between items-center mb-6">
+            <div className="relative w-full md:w-80">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
+              <Input
+                placeholder="Cari nama atau email..."
+                className="pl-9 bg-slate-50 focus-visible:ring-primary"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
           </div>
-        </div>
 
-        <div className="overflow-x-auto rounded-lg border border-gray-200">
-          <table className="table-base w-full">
-            <thead className="table-header bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="px-6 py-4 font-semibold text-gray-600">
-                  Nama Lengkap
-                </th>
-                <th className="px-6 py-4 font-semibold text-gray-600">Email</th>
-                <th className="px-6 py-4 font-semibold text-gray-600">Role</th>
-                <th className="px-6 py-4 font-semibold text-gray-600 text-right">
-                  Aksi
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {loading ? (
-                <tr>
-                  <td
-                    colSpan={4}
-                    className="px-6 py-8 text-center text-gray-500"
-                  >
-                    <div className="flex justify-center items-center gap-2">
-                      <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                      Memuat data...
-                    </div>
-                  </td>
-                </tr>
-              ) : filteredUsers.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={4}
-                    className="px-6 py-8 text-center text-gray-500"
-                  >
-                    Tidak ada pengguna ditemukan.
-                  </td>
-                </tr>
-              ) : (
-                filteredUsers.map((user) => (
-                  <tr
-                    key={user.id}
-                    className="table-row hover:bg-gray-50/50 transition-colors"
-                  >
-                    <td className="px-6 py-4 font-medium text-gray-900">
-                      {user.name}
-                    </td>
-                    <td className="px-6 py-4 text-gray-600">{user.email}</td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`px-2.5 py-1 text-xs font-semibold rounded-full ${
-                          user.role === "SUPER_ADMIN"
-                            ? "bg-purple-100 text-purple-700"
-                            : user.role === "EVENT_ADMIN"
-                              ? "bg-blue-100 text-blue-700"
-                              : "bg-slate-100 text-slate-700"
-                        }`}
-                      >
-                        {user.role.replace("_", " ")}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader className="bg-slate-50">
+                <TableRow>
+                  <TableHead>Nama Lengkap</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead className="text-right">Aksi</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableBodyStates isLoading={loading} isEmpty={filteredUsers.length === 0} colSpan={4} emptyMessage="Tidak ada pengguna ditemukan." />
+
+                {!loading && filteredUsers.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell className="font-medium text-foreground">{user.name}</TableCell>
+                      <TableCell className="text-muted-foreground">{user.email}</TableCell>
+                      <TableCell>
+                        <span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${
+                          user.role === 'SUPER_ADMIN' ? 'bg-purple-100 text-purple-700' :
+                          user.role === 'EVENT_ADMIN' ? 'bg-blue-100 text-blue-700' :
+                          'bg-slate-100 text-slate-700'
+                        }`}>
+                          {user.role.replace('_', ' ')}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => handleDeleteUser(user.id, user.name)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+              </TableBody>
+            </Table>
+          </div>
+        </TableCard>
       </motion.div>
+
+      {/* Add User Modal */}
+      <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Tambah Pengguna Baru</DialogTitle>
+            <p className="text-sm text-muted-foreground">
+              Masukkan detail pengguna baru. Password minimal 6 karakter.
+            </p>
+          </DialogHeader>
+          <DialogBody className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Nama Lengkap</label>
+              <Input
+                placeholder="Contoh: John Doe"
+                value={newUser.name}
+                onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Email</label>
+              <Input
+                type="email"
+                placeholder="john@example.com"
+                value={newUser.email}
+                onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Password</label>
+              <Input
+                type="password"
+                placeholder="Minimal 6 karakter"
+                value={newUser.password}
+                onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Role</label>
+              <Select
+                items={[
+                  { value: "OPERATOR", label: "OPERATOR" },
+                  { value: "EVENT_ADMIN", label: "EVENT_ADMIN" },
+                  { value: "SUPER_ADMIN", label: "SUPER_ADMIN" },
+                ]}
+                value={newUser.role}
+                onValueChange={(v) => setNewUser({ ...newUser, role: v as string })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih Role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="OPERATOR">OPERATOR</SelectItem>
+                  <SelectItem value="EVENT_ADMIN">EVENT_ADMIN</SelectItem>
+                  <SelectItem value="SUPER_ADMIN">SUPER_ADMIN</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddModal(false)}>Batal</Button>
+            <Button onClick={handleAddUser} disabled={isSubmitting}>
+              {isSubmitting ? "Menyimpan..." : "Simpan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Confirmation Dialog: Hapus Pengguna ────────────────── */}
+      <ConfirmationDialog
+        open={deleteConfirmation.isOpen}
+        onOpenChange={deleteConfirmation.setIsOpen}
+        title="Hapus Pengguna"
+        description={`Apakah Anda yakin ingin menghapus pengguna "${deleteTargetName}"? Tindakan ini tidak dapat dibatalkan.`}
+        confirmText="Hapus"
+        variant="danger"
+        isLoading={deleteConfirmation.isDeleting}
+        onConfirm={deleteConfirmation.confirmDelete}
+      />
     </div>
   );
 }

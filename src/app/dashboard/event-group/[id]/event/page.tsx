@@ -1,77 +1,65 @@
 "use client";
 
 import { useState } from "react";
-import useSWR from "swr";
 import { useParams } from "next/navigation";
-import { Plus, Loader2, ArrowUpDown, Eye, Edit3, Trash2 } from "lucide-react";
-import { toast } from "sonner";
-import { useSession } from "next-auth/react";
-
-import { Checkbox } from "@/components/ui/checkbox";
+import useSWR from "swr";
+import {
+  Search,
+  Plus,
+  Import,
+  ChevronLeft,
+  ChevronRight,
+  MoreHorizontal,
+  Eye,
+  Mail,
+  Loader2,
+  ArrowUpDown,
+  Edit3,
+  Trash2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePermissions } from "@/hooks/usePermissions";
-import { StatCard } from "@/components/dashboard/StatCard";
-import { TableToolbar } from "@/components/dashboard/TableToolbar";
-import { PaginationFooter } from "@/components/dashboard/PaginationFooter";
-import { GET_EVENTS_ALL } from "@/lib/api-endpoints";
-import DynamicModal, { DynamicField } from "@/components/ui/Dynamic-Modal";
-
+import { cn } from "@/lib/utils";
+import { StatCard } from "@/components/shared/StatCard";
+import { TableToolbar } from "@/components/shared/TableToolbar";
+import { PaginationFooter } from "@/components/shared/PaginationFooter";
+import { Checkbox } from "@/components/ui/checkbox";
+import { CardContent } from "@/components/ui/card";
+import { TableCard } from "@/components/shared/CustomCards";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogBody,
+  DialogFooter,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
+import { api } from "@/lib/api";
+import { GET_EVENTS, GET_EVENT_GROUP_DETAIL } from "@/lib/api-endpoints";
+import { ConfirmationDialog } from "@/components/shared/ConfirmationDialog";
+import { formatDateTime } from "@/lib/utils";
+import { useDeleteConfirmation } from "@/hooks/useDeleteConfirmation";
+import { TableBodyStates } from "@/components/shared/TableBodyStates";
 
-// ─── Types & Constants ──────────────────────────────────────────────────────
+// ─── Types ──────────────────────────────────────────────────────────────────
 interface EventItem {
-  id: string | number;
+  id: string;
   name: string;
-  description: string;
   start_datetime: string;
   end_datetime: string;
+  checkin_count?: number;
+  checkout_count?: number;
 }
 
-interface FormState {
-  name: string;
-  start_date: string;
-  end_date: string;
-}
-
-const fieldsGrupEvent: DynamicField[] = [
-  {
-    name: "name",
-    label: "Nama Event",
-    placeholder: "Masukkan nama event",
-    type: "text",
-  },
-];
-
-const initialFormState: FormState = {
-  name: "",
-  start_date: "",
-  end_date: "",
-};
-
-const initialErrors = {
-  name: "",
-  start_date: "",
-  end_date: "",
-  api: "",
-};
-
-// ─── DIUBAH: Menghapus field deskripsi dari detail modal ───────────────────
-const detailFields: DynamicField[] = [
-  { name: "name", label: "Nama Event", type: "text" },
-  { name: "event_group_name", label: "Grup Event", type: "text" },
-  { name: "start_date", label: "Waktu Mulai", type: "datetime-local" },
-  { name: "end_date", label: "Waktu Selesai", type: "datetime-local" },
-  { name: "attendances_count", label: "Total Peserta Hadir", type: "number" },
-];
+// ─── Page ───────────────────────────────────────────────────────────────────
 
 export default function EventPage() {
+  const { id } = useParams() as { id: string };
+  const [keyword, setKeyword] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
   const { can } = usePermissions();
   const params = useParams();
   const eventGroupId = params.id as string;
@@ -207,149 +195,73 @@ export default function EventPage() {
         return;
       }
 
-      await mutate();
-      toast.success("Event berhasil dibuat!");
-      setOpenCreateEventModal(false);
-      resetFormAndErrors();
-    } catch (error: any) {
-      setErrors((prev) => ({
-        ...prev,
-        api: error?.message || "Terjadi kesalahan",
-      }));
-    } finally {
-      setLoadingCreate(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<EventItem | null>(null);
+  const [formData, setFormData] = useState({
+    name: "",
+    start_datetime: "",
+    end_datetime: "",
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // ── Delete ──────────────────────────────────────────────────────
+  const deleteConfirmation = useDeleteConfirmation({
+    onDelete: async (eventId) => {
+      await api.delete(`/events/${eventId}`);
+      mutate();
+    },
+    successMessage: "Event berhasil dihapus",
+    errorMessage: "Gagal menghapus event",
+  });
+
+  // SWR fetch
+  const { data, error, isLoading, mutate } = useSWR<{ data: EventItem[]; meta: any }>(
+    GET_EVENTS(id, currentPage, 10, keyword)
+  );
+
+  // Fetch event group detail for total registration count
+  const { data: groupDetail } = useSWR<{ data: any }>(GET_EVENT_GROUP_DETAIL(id));
+  const totalRegistrations = groupDetail?.data?._count?.registrations ?? 0;
+
+  const handleOpenModal = (event?: EventItem) => {
+    if (event) {
+      setEditingEvent(event);
+      setFormData({
+        name: event.name,
+        // Remove 'Z' if present to format for datetime-local input
+        start_datetime: new Date(event.start_datetime).toISOString().slice(0, 16),
+        end_datetime: new Date(event.end_datetime).toISOString().slice(0, 16),
+      });
+    } else {
+      setEditingEvent(null);
+      setFormData({ name: "", start_datetime: "", end_datetime: "" });
     }
+    setIsModalOpen(true);
   };
 
-  const handleOpenEdit = (event: EventItem) => {
-    setSelectedId(String(event.id));
-    setForm({
-      name: event.name,
-      start_date: event.start_datetime
-        ? new Date(event.start_datetime).toISOString().slice(0, 16)
-        : "",
-      end_date: event.end_datetime
-        ? new Date(event.end_datetime).toISOString().slice(0, 16)
-        : "",
-    });
-    setOpenEditModal(true);
-  };
-
-  const handleUpdateEvent = async () => {
-    const newErrors = validateForm(form);
-    setErrors(newErrors);
-    if (newErrors.name || newErrors.start_date || newErrors.end_date) return;
-
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
     try {
-      setLoadingUpdate(true);
       const payload = {
-        name: form.name,
-        start_datetime: new Date(form.start_date).toISOString(),
-        end_datetime: new Date(form.end_date).toISOString(),
+        name: formData.name,
+        start_datetime: new Date(formData.start_datetime).toISOString(),
+        end_datetime: new Date(formData.end_datetime).toISOString(),
       };
 
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/events/${selectedId}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session?.user?.accessToken}`,
-          },
-          body: JSON.stringify(payload),
-        },
-      );
-
-      const response = await res.json();
-      if (!res.ok) {
-        setErrors((prev) => ({
-          ...prev,
-          api: response?.message || "Gagal update event",
-        }));
-        return;
+      if (editingEvent) {
+        await api.put(`/events/${editingEvent.id}`, payload);
+        toast.success("Event berhasil diupdate");
+      } else {
+        await api.post("/events", { ...payload, event_group_id: id });
+        toast.success("Event berhasil ditambahkan");
       }
-
-      await mutate();
-      toast.success("Event berhasil diupdate!");
-      setOpenEditModal(false);
-      setSelectedId(null);
-      resetFormAndErrors();
+      setIsModalOpen(false);
+      mutate();
     } catch (err: any) {
-      setErrors((prev) => ({
-        ...prev,
-        api: err?.message || "Terjadi kesalahan",
-      }));
+      toast.error(err.message || "Terjadi kesalahan");
     } finally {
-      setLoadingUpdate(false);
-    }
-  };
-
-  const handleOpenDetail = async (eventId: number | string) => {
-    try {
-      setLoadingDetail(true);
-      setOpenDetailModal(true);
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/events/${eventId}`,
-        {
-          headers: { Authorization: `Bearer ${session?.user?.accessToken}` },
-        },
-      );
-
-      const response = await res.json();
-      if (!res.ok) {
-        toast.error(response?.message || "Gagal mengambil detail event");
-        setOpenDetailModal(false);
-        return;
-      }
-
-      const event = response?.data;
-      setDetailForm({
-        name: event?.name || "",
-        event_group_name: event?.event_group?.name || "-",
-        start_date: event?.start_datetime || "",
-        end_date: event?.end_datetime || "",
-        attendances_count:
-          event?._count?.attendances !== undefined
-            ? `${event._count.attendances} Orang`
-            : "0 Orang",
-      });
-    } catch (err: any) {
-      toast.error(err?.message || "Terjadi kesalahan");
-      setOpenDetailModal(false);
-    } finally {
-      setLoadingDetail(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!selectedId) return;
-
-    setOpenDelete(false);
-
-    try {
-      setIsDeleting(true);
-
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/events/${selectedId}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${session?.user?.accessToken}`,
-          },
-        },
-      );
-
-      if (!res.ok) {
-        toast.error("Gagal menghapus event");
-        return;
-      }
-
-      await mutate();
-      toast.success("Event berhasil dihapus.");
-    } catch (err) {
-      toast.error("Terjadi masalah saat menghubungi server.");
-    } finally {
-      setIsDeleting(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -358,12 +270,12 @@ export default function EventPage() {
       {/* Summary Card */}
       <div className="flex flex-col space-y-3 md:space-x-4 md:flex-row md:space-y-0">
         <div className="w-full md:w-1/4 lg:w-1/5">
-          <StatCard title="Total Event" value={events.length} />
+          <StatCard title="Total Event" value={data?.meta?.total || 0} />
         </div>
       </div>
 
-      {/* Main Table Card */}
-      <div className="card-base card-border-primary overflow-hidden">
+      {/* ── Sort + Table ─────────────────────────────────────────────── */}
+      <TableCard>
         <TableToolbar
           title="Daftar Event"
           keyword={keyword}
@@ -372,9 +284,8 @@ export default function EventPage() {
           actionButton={
             can("eventCreate") && (
               <Button
-                onClick={() => setOpenCreateEventModal(true)}
+                onClick={() => handleOpenModal()}
                 className="whitespace-nowrap w-full"
-                style={{ backgroundColor: "var(--brand-primary)" }}
               >
                 <Plus className="w-4 h-4 mr-1" /> Tambah Event
               </Button>
@@ -382,83 +293,60 @@ export default function EventPage() {
           }
         />
 
-        <div className="relative overflow-x-auto">
-          <table className="table-base w-full border-none">
-            <thead className="table-header bg-gray-50/50">
-              <tr>
-                <th className="px-5 py-4 w-12 border-b">
+        {/* Data Table */}
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader className="bg-slate-50">
+              <TableRow>
+                <TableHead className="w-12 text-center">
                   <Checkbox />
-                </th>
-                <th className="px-5 py-4 whitespace-nowrap text-xs uppercase tracking-wider text-gray-500 font-semibold border-b">
-                  Nama
-                </th>
-                <th className="px-5 py-4 whitespace-nowrap text-xs uppercase tracking-wider text-gray-500 font-semibold border-b">
-                  Deskripsi
-                </th>
-                <th className="px-5 py-4 whitespace-nowrap text-xs uppercase tracking-wider text-gray-500 font-semibold border-b">
-                  Waktu Mulai
-                </th>
-                <th className="px-5 py-4 whitespace-nowrap text-xs uppercase tracking-wider text-gray-500 font-semibold border-b">
-                  Waktu Selesai
-                </th>
-                <th className="px-5 py-4 whitespace-nowrap text-xs uppercase tracking-wider text-gray-500 font-semibold border-b text-right">
-                  Opsi
-                </th>
-              </tr>
-            </thead>
-
-            <tbody className="divide-y divide-gray-100">
-              {isLoading && (
-                <tr>
-                  <td colSpan={6} className="h-32 text-center">
-                    <Loader2 className="w-6 h-6 animate-spin mx-auto text-gray-400" />
-                  </td>
-                </tr>
-              )}
+                </TableHead>
+                <TableHead>
+                  <div className="flex items-center cursor-pointer group">Nama <ArrowUpDown className="ml-2 h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" /></div>
+                </TableHead>
+                <TableHead>
+                  <div className="flex items-center cursor-pointer group">Waktu Mulai <ArrowUpDown className="ml-2 h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" /></div>
+                </TableHead>
+                <TableHead>
+                  <div className="flex items-center cursor-pointer group">Waktu Selesai <ArrowUpDown className="ml-2 h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" /></div>
+                </TableHead>
+                <TableHead className="text-center">Check-in</TableHead>
+                <TableHead className="text-center">Check-out</TableHead>
+                <TableHead className="text-right">Opsi</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableBodyStates isLoading={isLoading} isEmpty={data?.data?.length === 0} colSpan={7} emptyMessage="Tidak ada data event" />
 
               {!isLoading &&
-                filteredEvents.map((event) => (
-                  <tr
-                    key={event.id}
-                    className="hover:bg-gray-50/50 transition-colors"
-                  >
-                    <td className="px-5 py-4 border-b">
+                data?.data?.map((event) => (
+                  <TableRow key={event.id}>
+                    <TableCell className="text-center">
                       <Checkbox />
-                    </td>
-                    <td
-                      className="px-5 py-4 text-sm font-semibold"
-                      style={{ color: "var(--brand-primary)" }}
-                    >
-                      {event.name}
-                    </td>
-                    <td className="px-5 py-4 text-sm text-gray-600 max-w-xs truncate">
-                      {event.description || "-"}
-                    </td>
-                    <td className="px-5 py-4 text-sm text-gray-600">
+                    </TableCell>
+                    <TableCell className="font-semibold text-foreground">{event.name}</TableCell>
+                    <TableCell className="text-muted-foreground">
                       {formatDateTime(event.start_datetime)}
-                    </td>
-                    <td className="px-5 py-4 text-sm text-gray-600">
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
                       {formatDateTime(event.end_datetime)}
-                    </td>
-                    <td className="px-5 py-4 text-sm text-right">
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        {event.checkin_count ?? 0}/{totalRegistrations}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                        {event.checkout_count ?? 0}/{totalRegistrations}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right">
                       <div className="flex items-center justify-end space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-8 border-gray-200"
-                          onClick={() => handleOpenDetail(event.id)}
-                        >
-                          <Eye className="w-3.5 h-3.5 mr-1.5" /> Detail
-                        </Button>
-
                         {can("eventEdit") && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 border-gray-200"
-                            onClick={() => handleOpenEdit(event)}
-                          >
-                            <Edit3 className="w-3.5 h-3.5 mr-1.5" /> Edit
+                          <Button variant="outline" size="sm" onClick={() => handleOpenModal(event)}>
+                            <Edit3 className="w-3.5 h-3.5 mr-1.5" />
+                            Edit
                           </Button>
                         )}
 
@@ -466,143 +354,89 @@ export default function EventPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="h-8 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
-                            onClick={() => {
-                              setSelectedId(String(event.id));
-                              setOpenDelete(true);
-                            }}
+                            className="text-destructive border-destructive/20 hover:bg-destructive/10 hover:text-destructive"
+                            onClick={() => deleteConfirmation.openDelete(event.id)}
                           >
                             <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Hapus
                           </Button>
                         )}
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-
-              {!isLoading && filteredEvents.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={6}
-                    className="h-32 text-center text-gray-500 text-sm"
-                  >
-                    Tidak ada data event
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
 
         <PaginationFooter
-          currentPage={1}
-          totalPage={1}
-          totalData={filteredEvents.length}
-          onPrev={() => {}}
-          onNext={() => {}}
+          currentPage={currentPage}
+          totalPage={data?.meta?.total_pages || 1}
+          totalData={data?.meta?.total || 0}
+          onPrev={() => setCurrentPage((p) => Math.max(1, p - 1))}
+          onNext={() => setCurrentPage((p) => Math.min(data?.meta?.total_pages || 1, p + 1))}
+          onPageChange={(page) => setCurrentPage(page)}
         />
-      </div>
+      </TableCard>
 
-      {/* Create Modal */}
-      <DynamicModal
-        title="Tambah Event"
-        confirmLabel="Simpan"
-        showDates
-        fields={fieldsGrupEvent}
-        formState={form}
-        setFormState={handleSetFormState}
-        errors={errors}
-        isOpen={openCreateEventModal}
-        isLoading={loadingCreate}
-        onClose={() => {
-          setOpenCreateEventModal(false);
-          resetFormAndErrors();
-        }}
-        onConfirm={handleCreateEventGroup}
-      />
-
-      {/* Edit Modal */}
-      <DynamicModal
-        title="Edit Event"
-        confirmLabel="Update"
-        showDates
-        fields={fieldsGrupEvent}
-        formState={form}
-        setFormState={handleSetFormState}
-        errors={errors}
-        isOpen={openEditModal}
-        isLoading={loadingUpdate}
-        onClose={() => {
-          setOpenEditModal(false);
-          setSelectedId(null);
-          resetFormAndErrors();
-        }}
-        onConfirm={handleUpdateEvent}
-      />
-
-      {/* Detail Modal */}
-      <DynamicModal
-        mode="detail"
-        title="Detail Event"
-        confirmLabel=""
-        showDates={false}
-        fields={detailFields}
-        formState={detailForm}
-        setFormState={() => {}}
-        errors={{}}
-        isOpen={openDetailModal}
-        isLoading={loadingDetail}
-        onClose={() => {
-          setOpenDetailModal(false);
-          setDetailForm({
-            name: "",
-            event_group_name: "",
-            start_date: "",
-            end_date: "",
-            attendances_count: "",
-          });
-        }}
-        onConfirm={() => {}}
-      />
-
-      {/* Popup Konfirmasi Delete */}
-      <Dialog open={openDelete} onOpenChange={setOpenDelete}>
-        <DialogContent className="sm:max-w-[425px]">
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle>Hapus Event</DialogTitle>
-            <DialogDescription>
-              Apakah Anda yakin ingin menghapus data event ini? Tindakan ini
-              tidak dapat dibatalkan.
-            </DialogDescription>
+            <DialogTitle>{editingEvent ? "Edit Event" : "Tambah Event"}</DialogTitle>
           </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setOpenDelete(false);
-                setSelectedId(null);
-              }}
-              disabled={isDeleting}
-            >
-              Batal
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDelete}
-              disabled={isDeleting}
-            >
-              {isDeleting ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Menghapus...
-                </>
-              ) : (
-                "Hapus"
-              )}
-            </Button>
-          </DialogFooter>
+          <form onSubmit={handleSubmit}>
+            <DialogBody className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Nama Event</label>
+                <Input
+                  required
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="Masukkan nama event"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Waktu Mulai</label>
+                <Input
+                  required
+                  type="datetime-local"
+                  value={formData.start_datetime}
+                  onChange={(e) => setFormData({ ...formData, start_datetime: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Waktu Selesai</label>
+                <Input
+                  required
+                  type="datetime-local"
+                  value={formData.end_datetime}
+                  onChange={(e) => setFormData({ ...formData, end_datetime: e.target.value })}
+                />
+              </div>
+            </DialogBody>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
+                Batal
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                Simpan
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
+
+      {/* ── Confirmation Dialog: Hapus Event ────────────────── */}
+      <ConfirmationDialog
+        open={deleteConfirmation.isOpen}
+        onOpenChange={deleteConfirmation.setIsOpen}
+        title="Hapus Event"
+        description="Apakah Anda yakin ingin menghapus event ini? Semua data terkait juga akan dihapus. Tindakan ini tidak dapat dibatalkan."
+        confirmText="Hapus"
+        variant="danger"
+        isLoading={deleteConfirmation.isDeleting}
+        onConfirm={deleteConfirmation.confirmDelete}
+      />
     </div>
   );
 }

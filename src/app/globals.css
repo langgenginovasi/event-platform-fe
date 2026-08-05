@@ -6,11 +6,11 @@
 
 @theme {
   /* Brand Colors — Clean Deep Enterprise Blue */
-  --color-primary: #0a2540;        /* Dominan: Sidebar & Teks Utama */
-  --color-secondary: #113a6a;      /* Variasi Biru Gelap Sekunder */
-  --color-primary-hover: #1a4c88;  /* State Hover untuk Elemen Gelap */
-  --color-primary-light: #2563eb;  /* Highlight, Outgoing Chat, Button Aktif */
-  --color-primary-mid: #1d4ed8;    /* Variasi Progress Bar / Batas */
+  --color-primary: #0F1E36;        /* Dominan: logo, teks utama, tombol primer */
+  --color-secondary: #4A607A;      /* Muted: Untuk sub-title dan border halus */
+  --color-primary-hover: #1e3c6b;  /* State Hover untuk Elemen Gelap */
+  --color-primary-light: #4A607A;  /* Highlight, Outgoing Chat, Button Aktif */
+  --color-primary-mid: #2c4463;    /* Variasi Progress Bar / Batas */
 
   /* Accent */
   --color-accent-300: #7dd3fc;
@@ -18,62 +18,62 @@
   --color-accent-500: #0ea5e9;
 
   /* Neutral Surface */
-  --color-surface-light: #f8fafc;  /* Latar Belakang Aplikasi (Page BG) */
+  --color-surface-light: #F8F9FA;  /* Latar Belakang Aplikasi (Page BG) */
   --color-surface-white: #ffffff;  /* Background Card & Konten Utama */
-  --color-surface-dark: #0a2540;
+  --color-surface-dark: #0F1E36;
 
   --font-sans: ui-sans-serif, system-ui, sans-serif;
 }
 
 :root {
   --card-bg: rgba(255, 255, 255, 0.9);
-  --border-color: rgba(10, 37, 64, 0.1);
+  --border-color: rgba(0, 26, 65, 0.1);
 
   /* Sidebar */
-  --sidebar-bg: #0a2540;
-  --sidebar-hover: #1a4c88;
-  --sidebar-active: #1a4c88;
+  --sidebar-bg: #0F1E36;
+  --sidebar-hover: #1e3c6b;
+  --sidebar-active: #04315e;
   --sidebar-text: #ffffff;
   --sidebar-muted: rgba(255,255,255,0.6);
 
   /* Primary Brand */
-  --brand-primary: #0a2540;
-  --brand-secondary: #113a6a;
-  --brand-mid: #1d4ed8;
-  --brand-light: #2563eb;
+  --brand-primary: #0F1E36;
+  --brand-secondary: #4A607A;
+  --brand-mid: #2c4463;
+  --brand-light: #F8F9FA;
   /* ── shadcn tokens — mapped to brand palette ─── */
-  --background: #f8fafc;
-  --foreground: #0a2540;
+  --background: #F8F9FA;
+  --foreground: #0F1E36;
   --card: #ffffff;
-  --card-foreground: #0a2540;
+  --card-foreground: #0F1E36;
   --popover: #ffffff;
-  --popover-foreground: #0a2540;
-  --primary: #0a2540;
+  --popover-foreground: #0F1E36;
+  --primary: #0F1E36;
   --primary-foreground: #ffffff;
-  --secondary: #f1f5f9;
-  --secondary-foreground: #0a2540;
-  --muted: #f1f5f9;
-  --muted-foreground: #64748b;
-  --accent: #f1f5f9;
-  --accent-foreground: #0a2540;
+  --secondary: #F8F9FA;
+  --secondary-foreground: #0F1E36;
+  --muted: #F8F9FA;
+  --muted-foreground: #4A607A;
+  --accent: #F8F9FA;
+  --accent-foreground: #0F1E36;
   --destructive: #ef4444;
   --border: #e2e8f0;
   --input: #e2e8f0;
-  --ring: #2563eb;
-  --chart-1: #0a2540;
-  --chart-2: #2563eb;
+  --ring: #4A607A;
+  --chart-1: #0F1E36;
+  --chart-2: #0f52ba;
   --chart-3: #0ea5e9;
   --chart-4: #38bdf8;
   --chart-5: #7dd3fc;
   --radius: 0.625rem;
-  --sidebar: #0a2540;
+  --sidebar: #0F1E36;
   --sidebar-foreground: #ffffff;
-  --sidebar-primary: #2563eb;
+  --sidebar-primary: #0f52ba;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #1a4c88;
+  --sidebar-accent: #04315e;
   --sidebar-accent-foreground: #ffffff;
   --sidebar-border: rgba(255,255,255,0.1);
-  --sidebar-ring: #2563eb;
+  --sidebar-ring: #0f52ba;
 }
 
 html,
@@ -115,54 +115,8 @@ body {
   background-color: var(--sidebar-active);
 }
 
-/* ── Card Styles ─────────────────────────────────── */
-.card-base {
-  background-color: #ffffff;
-  border-radius: 0.5rem;
-  box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
-}
-
-.card-border-primary {
-  border-left: 4px solid var(--brand-primary);
-}
-
-/* ── Button Styles ─────────────────────────────────── */
-.btn-primary {
-  background-color: var(--brand-primary);
-  color: #ffffff;
-  font-weight: 600;
-  border-radius: 0.375rem;
-  transition: background-color 0.2s ease;
-}
-
-.btn-primary:hover {
-  background-color: var(--brand-light);
-}
-
-.btn-primary:disabled {
-  background-color: #d1d5db;
-  cursor: not-allowed;
-}
-
-/* ── Table Styles ─────────────────────────────────── */
-.table-base {
-  width: 100%;
-  font-size: 0.875rem;
-  color: #6b7280;
-  text-align: left;
-}
-
-.table-header {
-  font-size: 0.75rem;
-  color: #374151;
-  text-transform: uppercase;
-  background-color: #f9fafb;
-}
-
-.table-row {
-  background-color: #ffffff;
-  border-bottom: 1px solid #f3f4f6;
-}
+/* ── Menghapus Custom Classes sesuai instruksi ──────── */
+/* Custom class seperti .card-base, .table-base, .btn-primary dihapus agar developer menggunakan Shadcn UI Components murni secara langsung. */
 
 /* ── Glassmorphism (retained for auth page) ─────── */
 .glass-panel {
