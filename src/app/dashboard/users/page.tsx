@@ -49,7 +49,9 @@ export default function UsersPage() {
       setUsers(res.data);
     } catch (error) {
       console.error(error);
-      toast.error("Gagal memuat data pengguna. Pastikan Anda login sebagai Super Admin.");
+      toast.error(
+        "Gagal memuat data pengguna. Pastikan Anda login sebagai Super Admin.",
+      );
     } finally {
       setLoading(false);
     }
@@ -59,9 +61,10 @@ export default function UsersPage() {
     fetchUsers();
   }, []);
 
-  const filteredUsers = users.filter((u) =>
-    u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    u.email.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredUsers = users.filter(
+    (u) =>
+      u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      u.email.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   const handleAddUser = async () => {
@@ -94,15 +97,19 @@ export default function UsersPage() {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Manajemen Pengguna</h1>
-          <p className="text-gray-500 text-sm">Kelola admin dan operator sistem.</p>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Manajemen Pengguna
+          </h1>
+          <p className="text-gray-500 text-sm">
+            Kelola admin dan operator sistem.
+          </p>
         </div>
         <Button className="gap-2 w-full md:w-auto" onClick={() => setShowAddModal(true)}>
           <Plus className="w-4 h-4" /> Tambah Pengguna
         </Button>
       </div>
 
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
       >

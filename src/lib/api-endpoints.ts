@@ -22,6 +22,10 @@ export const GET_EVENTS = (eventGroupId?: string, page = 1, limit = 10, search =
   return `/events?${params.toString()}`;
 };
 
+export const MUTATE_EVENT = () => `/events`;
+export const MUTATE_EVENT_DETAIL = (id: string | number) => `/events/${id}`;
+
+// ─── Registrations (Participants) ───────────────────────────────────────────
 // ─── Registrations (Participants) ───────────────────────────────────────────
 export const GET_REGISTRATIONS = (eventGroupId?: string, page = 1, limit = 10, search = "", sort?: string, order?: string) => {
   const params = new URLSearchParams();
@@ -34,6 +38,21 @@ export const GET_REGISTRATIONS = (eventGroupId?: string, page = 1, limit = 10, s
   return `/registrations?${params.toString()}`;
 };
 export const GET_REGISTRATION_DETAIL = (id: string) => `/registrations/${id}`;
+
+export const GET_REGISTRATIONS_BY_GROUP = (eventGroupId: string) =>
+  `/registrations?event_group_id=${eventGroupId}`;
+
+export const GET_REGISTRATIONS_BY_EVENT = (eventId: string | number) =>
+  `/registrations?event_id=${eventId}`;
+
+// 1. Endpoint khusus untuk membuat (POST) Registrasi Baru
+export const POST_REGISTRATION = () => `/registrations`;
+
+export const MUTATE_REGISTRATION_DETAIL = (id: string | number) =>
+  `/registrations/${id}`;
+
+export const GET_REGISTRATION_DETAIL_BY_PARTICIPANT = (participantId: string) =>
+  `/registrations?participant_id=${participantId}`;
 
 // ─── Attendances ────────────────────────────────────────────────────────────
 export const GET_ATTENDANCES = (eventId?: string, eventGroupId?: string, registrationId?: string) => {

@@ -61,6 +61,139 @@ export default function EventPage() {
   const [keyword, setKeyword] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const { can } = usePermissions();
+  const params = useParams();
+  const eventGroupId = params.id as string;
+  const { data: session } = useSession();
+
+  const {
+    data: eventsRes,
+    isLoading,
+    mutate,
+  } = useSWR(eventGroupId ? GET_EVENTS_ALL(eventGroupId) : null);
+
+  // ─── States Paging & Filter ─────────────────────────────────────────────────
+  const [keyword, setKeyword] = useState("");
+
+  // ─── States Modal Delete (selectedId dipakai bersama untuk Edit & Delete) ────
+  const [openDelete, setOpenDelete] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Modal Toggles Form Create/Edit
+  const [openCreateEventModal, setOpenCreateEventModal] = useState(false);
+  const [openEditModal, setOpenEditModal] = useState(false);
+
+  // Loading States Form
+  const [loadingCreate, setLoadingCreate] = useState(false);
+  const [loadingUpdate, setLoadingUpdate] = useState(false);
+
+  // Form & Validation States
+  const [form, setForm] = useState<FormState>(initialFormState);
+  const [errors, setErrors] = useState(initialErrors);
+
+  // Detail State
+  const [openDetailModal, setOpenDetailModal] = useState(false);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [detailForm, setDetailForm] = useState({
+    name: "",
+    event_group_name: "",
+    start_date: "",
+    end_date: "",
+    attendances_count: "",
+  });
+
+  // ─── Computed Data ──────────────────────────────────────────────────────────
+  const events: EventItem[] = eventsRes?.data ?? [];
+  const filteredEvents = events.filter((item: EventItem) => {
+    const search = keyword.toLowerCase();
+    return (
+      item.name?.toLowerCase().includes(search) ||
+      item.description?.toLowerCase().includes(search)
+    );
+  });
+
+  // ─── Helper Functions ───────────────────────────────────────────────────────
+  const formatDateTime = (dateStr: string) => {
+    if (!dateStr) return "-";
+    try {
+      return new Date(dateStr).toLocaleString("id-ID");
+    } catch {
+      return "-";
+    }
+  };
+
+  const validateForm = (currentForm: FormState) => {
+    const newErrors = { ...initialErrors };
+
+    if (!currentForm.name.trim()) newErrors.name = "Nama event wajib diisi";
+    if (!currentForm.start_date)
+      newErrors.start_date = "Tanggal mulai wajib diisi";
+    if (!currentForm.end_date)
+      newErrors.end_date = "Tanggal selesai wajib diisi";
+
+    if (currentForm.start_date && currentForm.end_date) {
+      if (new Date(currentForm.start_date) >= new Date(currentForm.end_date)) {
+        newErrors.end_date = "Tanggal selesai harus setelah tanggal mulai";
+      }
+    }
+
+    return newErrors;
+  };
+
+  const handleFormChange = (updatedForm: FormState) => {
+    setForm(updatedForm);
+    setErrors(validateForm(updatedForm));
+  };
+
+  const handleSetFormState = (callbackOrValue: any) => {
+    if (typeof callbackOrValue === "function") {
+      setForm((prev) => {
+        const nextState = callbackOrValue(prev);
+        setErrors(validateForm(nextState));
+        return nextState;
+      });
+    } else {
+      handleFormChange(callbackOrValue);
+    }
+  };
+
+  const resetFormAndErrors = () => {
+    setForm(initialFormState);
+    setErrors(initialErrors);
+  };
+
+  // ─── API Handlers ───────────────────────────────────────────────────────────
+  const handleCreateEventGroup = async () => {
+    const newErrors = validateForm(form);
+    setErrors(newErrors);
+    if (newErrors.name || newErrors.start_date || newErrors.end_date) return;
+
+    try {
+      setLoadingCreate(true);
+      const payload = {
+        event_group_id: eventGroupId,
+        name: form.name,
+        start_datetime: new Date(form.start_date).toISOString(),
+        end_datetime: new Date(form.end_date).toISOString(),
+      };
+
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/events`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.user?.accessToken}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const response = await res.json();
+      if (!res.ok) {
+        setErrors((prev) => ({
+          ...prev,
+          api: response?.message || "Gagal membuat event",
+        }));
+        return;
+      }
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<EventItem | null>(null);
@@ -134,7 +267,7 @@ export default function EventPage() {
 
   return (
     <div className="flex flex-col space-y-7 md:space-y-10 pb-20 md:pb-0">
-      {/* ── Summary Card ─────────────────────────────────────────────── */}
+      {/* Summary Card */}
       <div className="flex flex-col space-y-3 md:space-x-4 md:flex-row md:space-y-0">
         <div className="w-full md:w-1/4 lg:w-1/5">
           <StatCard title="Total Event" value={data?.meta?.total || 0} />
@@ -154,8 +287,7 @@ export default function EventPage() {
                 onClick={() => handleOpenModal()}
                 className="whitespace-nowrap w-full"
               >
-                <Plus className="w-4 h-4 mr-1" />
-                Tambah Event
+                <Plus className="w-4 h-4 mr-1" /> Tambah Event
               </Button>
             )
           }
@@ -217,6 +349,7 @@ export default function EventPage() {
                             Edit
                           </Button>
                         )}
+
                         {can("eventDelete") && (
                           <Button
                             variant="outline"
@@ -224,8 +357,7 @@ export default function EventPage() {
                             className="text-destructive border-destructive/20 hover:bg-destructive/10 hover:text-destructive"
                             onClick={() => deleteConfirmation.openDelete(event.id)}
                           >
-                            <Trash2 className="w-3.5 h-3.5 mr-1.5" />
-                            Hapus
+                            <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Hapus
                           </Button>
                         )}
                       </div>
@@ -236,7 +368,6 @@ export default function EventPage() {
           </Table>
         </div>
 
-        {/* Pagination */}
         <PaginationFooter
           currentPage={currentPage}
           totalPage={data?.meta?.total_pages || 1}

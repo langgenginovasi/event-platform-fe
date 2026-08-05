@@ -11,6 +11,14 @@ import { CreateEventGroupModal } from "@/components/features/dashboard/CreateEve
 import { RecentEventGroupsTable } from "@/components/features/dashboard/RecentEventGroupsTable";
 import { DashboardSidebar } from "@/components/features/dashboard/DashboardSidebar";
 
+const fieldsGrupEvent = [
+  {
+    name: "name",
+    label: "Nama Event",
+    placeholder: "Masukkan nama event",
+  },
+];
+
 export default function EventAdminDashboard() {
   const { data: session } = useSession();
   const actions = useDashboardActions();

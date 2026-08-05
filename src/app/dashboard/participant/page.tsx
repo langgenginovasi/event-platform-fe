@@ -19,6 +19,40 @@ import { AddToEventGroupModal } from "@/components/features/participant/AddToEve
 import { DetailParticipantModal } from "@/components/features/participant/DetailParticipantModal";
 import { TableBodyStates } from "@/components/shared/TableBodyStates";
 
+const fieldsParticipantManual = [
+  {
+    name: "name",
+    label: "Nama Lengkap",
+    placeholder: "Masukkan nama lengkap",
+  },
+  {
+    name: "email",
+    label: "Email",
+    placeholder: "Masukkan email",
+    type: "email" as const,
+  },
+  {
+    name: "gender",
+    label: "Jenis Kelamin",
+    type: "select" as const,
+    options: [
+      {
+        label: "Laki-laki",
+        value: "L",
+      },
+      {
+        label: "Perempuan",
+        value: "P",
+      },
+    ],
+  },
+  {
+    name: "company",
+    label: "Perusahaan",
+    placeholder: "Masukkan nama perusahaan",
+  },
+];
+
 export default function ParticipantPage() {
   const { can } = usePermissions();
   const actions = useParticipantActions();

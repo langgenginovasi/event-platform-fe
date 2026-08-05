@@ -9,6 +9,7 @@ import { GlassCard } from "@/components/shared/CustomCards";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
+import { useSession } from "next-auth/react";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -42,7 +43,7 @@ export default function SettingsPage() {
       toast.error("Nama tidak boleh kosong");
       return;
     }
-    
+
     try {
       setSaving(true);
       const payload: any = { name };
@@ -96,7 +97,7 @@ export default function SettingsPage() {
         </button>
       </div>
 
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         key={activeTab}
