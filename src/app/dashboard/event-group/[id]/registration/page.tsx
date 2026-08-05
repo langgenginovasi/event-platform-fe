@@ -1,16 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import {
-  Search,
-  Eye,
-  ArrowDownToLine,
-  ArrowUpFromLine,
-  ArrowUpDown,
-  UserPlus,
-} from "lucide-react";
+import { useState, useMemo } from "react";
+import { Eye, ArrowDownToLine, ArrowUpFromLine, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { useParams } from "next/navigation";
@@ -18,105 +10,351 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { TableToolbar } from "@/components/dashboard/TableToolbar";
 import { PaginationFooter } from "@/components/dashboard/PaginationFooter";
+import useSWR from "swr";
+import { useSession } from "next-auth/react";
+import { toast } from "sonner";
+import DynamicModal, { DynamicField } from "@/components/ui/Dynamic-Modal";
 
-// ─── Types & Mock Data ──────────────────────────────────────────────────────
+// Import endpoint builders yang baru
+import {
+  GET_REGISTRATIONS_BY_GROUP,
+  POST_REGISTRATION,
+  GET_REGISTRATION_DETAIL_BY_PARTICIPANT,
+} from "@/lib/api-endpoints";
 
-type ParticipantItem = {
-  id: number;
+// ─── Interfaces ────────────────────────────────────────────────────────────
+interface RegistrationResponse {
+  data: Array<{
+    id: string;
+    event_group_id: string;
+    participant_id: string;
+    qr_code: string;
+    status: string;
+    created_at: string;
+    participant: {
+      id: string;
+      name: string;
+      email: string;
+      gender: string;
+      company: string;
+    };
+    attendances: Array<{
+      id: string;
+      type: "checkin" | "checkout";
+      scanned_at: string;
+    }>;
+  }>;
+}
+
+interface RegistrationItem {
+  id: string;
+  participant_id: string; // Ditambahkan untuk pelacakan detail API
   fullname: string;
+  email: string;
   jenis_kelamin: string;
   company: string;
-  email: string;
-  check_in?: string; // Optional: e.g. "10:00"
-  check_out?: string; // Optional: e.g. "16:00"
-};
+  raw_check_in: string | null;
+  raw_check_out: string | null;
+  check_in_time: string;
+  check_out_time: string;
+}
 
-const mockParticipants: ParticipantItem[] = [
+interface FormState {
+  name: string;
+  email: string;
+  company: string;
+  gender: string;
+}
+
+// ─── Constants Configurations ───────────────────────────────────────────────
+const fieldsTambahRegistrasi: DynamicField[] = [
   {
-    id: 1,
-    fullname: "Aditya Pratama",
-    jenis_kelamin: "L",
-    company: "PT Maju Mundur",
-    email: "aditya@example.com",
-    check_in: "08:15",
+    name: "name",
+    label: "Nama Peserta",
+    placeholder: "Masukkan nama lengkap",
+    type: "text",
   },
   {
-    id: 2,
-    fullname: "Budi Santoso",
-    jenis_kelamin: "L",
-    company: "Startup Asia",
-    email: "budi.s@example.com",
-    check_in: "08:30",
-    check_out: "17:00",
+    name: "email",
+    label: "Email",
+    placeholder: "Masukkan alamat email",
+    type: "email",
   },
   {
-    id: 3,
-    fullname: "Citra Kirana",
-    jenis_kelamin: "P",
-    company: "CV Karya Bangsa",
-    email: "citra@example.com",
+    name: "gender",
+    label: "Jenis Kelamin",
+    type: "select",
+    options: [
+      { value: "L", label: "Laki-laki" },
+      { value: "P", label: "Perempuan" },
+    ],
+  },
+  {
+    name: "company",
+    label: "Perusahaan / Instansi",
+    placeholder: "Masukkan nama perusahaan",
+    type: "text",
   },
 ];
 
-// ─── Page ───────────────────────────────────────────────────────────────────
+// Konfigurasi field detail untuk menampilkan informasi murni dari data Anda
+const detailFields: DynamicField[] = [
+  { name: "name", label: "Nama Lengkap", type: "text" },
+  { name: "email", label: "Email", type: "text" },
+  { name: "company", label: "Perusahaan / Instansi", type: "text" },
+  { name: "event_group_name", label: "Grup Event Terdaftar", type: "text" },
+  { name: "status", label: "Status Registrasi", type: "text" },
+  {
+    name: "total_attendances",
+    label: "Total Presensi Scanned",
+    type: "number",
+  },
+];
 
-export default function RegistrationPage() {
-  const [keyword, setKeyword] = useState("");
-  const [order, setOrder] = useState("fullname:ASC");
+const initialFormState: FormState = {
+  name: "",
+  email: "",
+  company: "",
+  gender: "",
+};
+const initialErrors = { name: "", email: "", company: "", gender: "", api: "" };
+
+// ─── Main Component ──────────────────────────────────────────────────────────
+export default function RegistrationDashboard() {
   const params = useParams();
-  const eventGroupId = params.id as string;
-  const isLoading = false;
   const { can } = usePermissions();
+  const { data: session } = useSession();
 
-  const data = {
-    data: mockParticipants,
-    total: mockParticipants.length,
-    totalPage: 1,
+  const [keyword, setKeyword] = useState("");
+  const eventGroupId = params?.id as string;
+
+  // SWR Fetch data utama tabel
+  const {
+    data: serverData,
+    error,
+    isLoading,
+    mutate,
+  } = useSWR<RegistrationResponse>(
+    eventGroupId ? GET_REGISTRATIONS_BY_GROUP(eventGroupId) : null,
+  );
+
+  // States Modal Create
+  const [openCreateModal, setOpenCreateModal] = useState(false);
+  const [loadingCreate, setLoadingCreate] = useState(false);
+  const [form, setForm] = useState<FormState>(initialFormState);
+  const [errors, setErrors] = useState(initialErrors);
+
+  // States Modal Detail
+  const [openDetailModal, setOpenDetailModal] = useState(false);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [detailForm, setDetailForm] = useState({
+    name: "",
+    email: "",
+    company: "",
+    event_group_name: "",
+    status: "",
+    total_attendances: "",
+  });
+
+  // ─── Data Mapping ──────────────────────────────────────────────────────────
+  const participants = useMemo<RegistrationItem[]>(() => {
+    return (
+      serverData?.data?.map((item) => {
+        const attendances = item.attendances ?? [];
+        const checkInItem = attendances.find((a) => a.type === "checkin");
+        const checkOutItem = attendances.find((a) => a.type === "checkout");
+
+        const genderMap: Record<string, string> = {
+          L: "Laki-laki",
+          P: "Perempuan",
+        };
+
+        return {
+          id: item.id,
+          participant_id: item.participant_id,
+          fullname: item.participant?.name || "Tanpa Nama",
+          email: item.participant?.email || "-",
+          jenis_kelamin: genderMap[item.participant?.gender] || "-",
+          company: item.participant?.company || "-",
+          raw_check_in: checkInItem?.scanned_at ?? null,
+          raw_check_out: checkOutItem?.scanned_at ?? null,
+          check_in_time: checkInItem?.scanned_at
+            ? new Date(checkInItem.scanned_at).toLocaleTimeString("id-ID", {
+                hour: "2-digit",
+                minute: "2-digit",
+              })
+            : "-",
+          check_out_time: checkOutItem?.scanned_at
+            ? new Date(checkOutItem.scanned_at).toLocaleTimeString("id-ID", {
+                hour: "2-digit",
+                minute: "2-digit",
+              })
+            : "-",
+        };
+      }) || []
+    );
+  }, [serverData]);
+
+  const filteredParticipants = useMemo(() => {
+    return participants.filter((p) => {
+      return (
+        p.fullname.toLowerCase().includes(keyword.toLowerCase()) ||
+        p.company.toLowerCase().includes(keyword.toLowerCase())
+      );
+    });
+  }, [participants, keyword]);
+
+  const totalRegistrasi = participants.length;
+  const totalCheckIn = participants.filter((p) => p.raw_check_in).length;
+  const totalCheckOut = participants.filter((p) => p.raw_check_out).length;
+
+  // ─── Form Helpers ──────────────────────────────────────────────────────────
+  const validateForm = (currentForm: FormState) => {
+    const newErrors = { ...initialErrors };
+    if (!currentForm.name.trim()) newErrors.name = "Nama wajib diisi";
+    if (!currentForm.email.trim()) {
+      newErrors.email = "Email wajib diisi";
+    } else if (!/\S+@\S+\.\S+/.test(currentForm.email)) {
+      newErrors.email = "Format email tidak valid";
+    }
+    if (!currentForm.gender.trim())
+      newErrors.gender = "Jenis kelamin wajib dipilih";
+    if (!currentForm.company.trim())
+      newErrors.company = "Nama perusahaan wajib diisi";
+    return newErrors;
+  };
+
+  const handleSetFormState = (callbackOrValue: any) => {
+    if (typeof callbackOrValue === "function") {
+      setForm((prev) => {
+        const nextState = callbackOrValue(prev);
+        setErrors(validateForm(nextState));
+        return nextState;
+      });
+    } else {
+      setForm(callbackOrValue);
+      setErrors(validateForm(callbackOrValue));
+    }
+  };
+
+  // ─── Action Handlers ───────────────────────────────────────────────────────
+  const handleCreateRegistration = async () => {
+    const newErrors = validateForm(form);
+    setErrors(newErrors);
+    if (
+      newErrors.name ||
+      newErrors.email ||
+      newErrors.gender ||
+      newErrors.company
+    )
+      return;
+
+    try {
+      setLoadingCreate(true);
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}${POST_REGISTRATION()}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session?.user?.accessToken}`,
+          },
+          body: JSON.stringify({
+            event_group_id: eventGroupId,
+            name: form.name,
+            email: form.email,
+            gender: form.gender,
+            company: form.company,
+          }),
+        },
+      );
+
+      const response = await res.json();
+      if (!res.ok) {
+        setErrors((prev) => ({
+          ...prev,
+          api: response?.message || "Gagal membuat registrasi",
+        }));
+        return;
+      }
+
+      await mutate();
+      toast.success("Peserta baru berhasil diregistrasikan!");
+      setOpenCreateModal(false);
+      setForm(initialFormState);
+    } catch (error: any) {
+      toast.error("Terjadi kesalahan sistem.");
+    } finally {
+      setLoadingCreate(false);
+    }
+  };
+
+  // Handler Detail Baru Berbasis participant_id Array Response
+  const handleOpenDetail = async (participantId: string) => {
+    try {
+      setLoadingDetail(true);
+      setOpenDetailModal(true);
+
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}${GET_REGISTRATION_DETAIL_BY_PARTICIPANT(participantId)}`,
+        {
+          headers: { Authorization: `Bearer ${session?.user?.accessToken}` },
+        },
+      );
+
+      const response = await res.json();
+      if (!res.ok) {
+        toast.error(response?.message || "Gagal mengambil detail");
+        setOpenDetailModal(false);
+        return;
+      }
+
+      // Ambil indeks pertama dari array data response
+      const regData = response?.data?.[0];
+
+      if (regData) {
+        setDetailForm({
+          name: regData.participant?.name || "-",
+          email: regData.participant?.email || "-",
+          company: regData.participant?.company || "-",
+          event_group_name: regData.event_group?.name || "-",
+          status: regData.status || "-",
+          total_attendances:
+            regData._count?.attendances !== undefined
+              ? `${regData._count.attendances} Kali`
+              : "0 Kali",
+        });
+      }
+    } catch (err) {
+      toast.error("Terjadi kesalahan sistem.");
+      setOpenDetailModal(false);
+    } finally {
+      setLoadingDetail(false);
+    }
   };
 
   return (
     <div className="flex flex-col space-y-7 md:space-y-10 pb-20 md:pb-0">
-      {/* ── Filters + Summary Cards ──────────────────────────────────── */}
+      {/* STAT CARDS */}
       <div className="flex flex-col space-y-6">
-        <div className="flex flex-col space-y-3 sm:space-x-4 sm:flex-row sm:space-y-0">
-          <div className="w-full sm:w-1/3 lg:w-1/4">
-            <StatCard title="Total Registrasi" value={data?.total || 0} />
-          </div>
-          <div className="w-full sm:w-1/3 lg:w-1/4">
-            <StatCard 
-              title="Total Check In" 
-              value={data.data.filter(p => p.check_in).length} 
-              borderLeftColorClass="border-l-emerald-500"
-              valueColorClass="text-emerald-600"
-            />
-          </div>
-          <div className="w-full sm:w-1/3 lg:w-1/4">
-            <StatCard 
-              title="Total Check Out" 
-              value={data.data.filter(p => p.check_out).length} 
-              borderLeftColorClass="border-l-rose-500"
-              valueColorClass="text-rose-600"
-            />
-          </div>
+        <div className="flex flex-col sm:flex-row sm:space-x-4 sm:space-y-0 space-y-3">
+          <StatCard title="Total Registrasi" value={totalRegistrasi} />
+          <StatCard title="Total Check In" value={totalCheckIn} />
+          <StatCard title="Total Check Out" value={totalCheckOut} />
         </div>
       </div>
 
-      {/* ── Data Table ─────────────────────────────────────────────── */}
+      {/* TABLE DATA */}
       <div className="card-base card-border-primary overflow-hidden">
         <TableToolbar
-          title={`Registrasi Peserta (Event Group #${eventGroupId})`}
+          title="Registrasi Peserta"
           keyword={keyword}
           setKeyword={setKeyword}
-          searchPlaceholder="Cari peserta..."
+          searchPlaceholder="Cari nama atau perusahaan..."
           actionButton={
             can("registrationManage") && (
-              <Button
-                onClick={() => {/* TODO: add participant to event */}}
-                className="whitespace-nowrap w-full"
-                style={{ backgroundColor: "var(--brand-primary)" }}
-              >
-                <UserPlus className="w-4 h-4 mr-1" />
-                Tambah Registrasi
+              <Button onClick={() => setOpenCreateModal(true)}>
+                <UserPlus className="w-4 h-4 mr-1" /> Tambah Registrasi
               </Button>
             )
           }
@@ -126,131 +364,91 @@ export default function RegistrationPage() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-gray-50/50">
-                <th className="w-12 px-5 py-4 border-b">
+                <th className="px-5 py-4 border-b w-10">
                   <Checkbox />
                 </th>
-                <th className="px-5 py-4 whitespace-nowrap text-xs uppercase tracking-wider text-gray-500 font-semibold border-b cursor-pointer hover:bg-gray-100 transition-colors group">
-                  <div className="flex items-center">
-                    Nama Peserta{" "}
-                    <ArrowUpDown className="ml-2 h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </div>
-                </th>
-                <th className="px-5 py-4 whitespace-nowrap text-xs uppercase tracking-wider text-gray-500 font-semibold border-b cursor-pointer hover:bg-gray-100 transition-colors group">
-                  <div className="flex items-center">
-                    L/P{" "}
-                    <ArrowUpDown className="ml-2 h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </div>
-                </th>
-                <th className="px-5 py-4 whitespace-nowrap text-xs uppercase tracking-wider text-gray-500 font-semibold border-b cursor-pointer hover:bg-gray-100 transition-colors group">
-                  <div className="flex items-center">
-                    Perusahaan{" "}
-                    <ArrowUpDown className="ml-2 h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </div>
-                </th>
-                <th className="px-5 py-4 whitespace-nowrap text-xs uppercase tracking-wider text-gray-500 font-semibold border-b cursor-pointer hover:bg-gray-100 transition-colors group">
-                  <div className="flex items-center">
-                    Check In{" "}
-                    <ArrowUpDown className="ml-2 h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </div>
-                </th>
-                <th className="px-5 py-4 whitespace-nowrap text-xs uppercase tracking-wider text-gray-500 font-semibold border-b cursor-pointer hover:bg-gray-100 transition-colors group">
-                  <div className="flex items-center">
-                    Check Out{" "}
-                    <ArrowUpDown className="ml-2 h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </div>
-                </th>
-                <th className="px-5 py-4 whitespace-nowrap text-xs uppercase tracking-wider text-gray-500 font-semibold border-b text-right">
-                  Opsi
-                </th>
+                <th className="px-5 py-4 border-b">Nama</th>
+                <th className="px-5 py-4 border-b">L/P</th>
+                <th className="px-5 py-4 border-b">Perusahaan</th>
+                <th className="px-5 py-4 border-b">Check In</th>
+                <th className="px-5 py-4 border-b">Check Out</th>
+                <th className="px-5 py-4 border-b text-right">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+
+            <tbody className="divide-y">
               {isLoading && (
                 <tr>
-                  <td colSpan={7} className="h-32 text-center">
-                    <div className="flex items-center justify-center">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--brand-primary)]"></div>
-                    </div>
+                  <td colSpan={7} className="text-center h-32 text-gray-500">
+                    Membuka data...
                   </td>
                 </tr>
               )}
-
-              {!isLoading && (!data?.data || data.data.length === 0) && (
+              {error && (
                 <tr>
-                  <td
-                    colSpan={7}
-                    className="h-32 text-center text-gray-500 text-sm"
-                  >
-                    Tidak ada data peserta terdaftar
+                  <td colSpan={7} className="text-center text-red-500 h-32">
+                    Gagal memuat data dari server.
+                  </td>
+                </tr>
+              )}
+              {!isLoading && !error && filteredParticipants.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="text-center text-gray-400 h-32">
+                    Tidak ada data peserta ditemukan.
                   </td>
                 </tr>
               )}
 
               {!isLoading &&
-                data?.data?.map((p) => (
-                  <tr
-                    key={p.id}
-                    className="hover:bg-gray-50/50 transition-colors"
-                  >
+                !error &&
+                filteredParticipants.map((p) => (
+                  <tr key={p.id} className="hover:bg-gray-50/50">
                     <td className="px-5 py-4">
                       <Checkbox />
                     </td>
                     <td className="px-5 py-4">
-                      <div className="flex flex-col">
-                        <span className="text-sm font-semibold text-gray-800">
-                          {p.fullname}
-                        </span>
-                      </div>
+                      <div className="font-semibold">{p.fullname}</div>
+                      <div className="text-xs text-gray-400">{p.email}</div>
                     </td>
-                    <td className="px-5 py-4 text-sm text-gray-600 capitalize">
-                      {p.jenis_kelamin}
+                    <td className="px-5 py-4">{p.jenis_kelamin}</td>
+                    <td className="px-5 py-4">{p.company}</td>
+                    <td className="px-5 py-4 font-mono text-sm">
+                      {p.check_in_time}
                     </td>
-                    <td className="px-5 py-4 text-sm text-gray-600">
-                      {p.company}
+                    <td className="px-5 py-4 font-mono text-sm">
+                      {p.check_out_time}
                     </td>
-                    <td className="px-5 py-4 text-sm text-gray-600 font-mono">
-                      {p.check_in || "-"}
-                    </td>
-                    <td className="px-5 py-4 text-sm text-gray-600 font-mono">
-                      {p.check_out || "-"}
-                    </td>
-                    <td className="px-5 py-4 text-sm text-right">
-                      <div className="flex items-center justify-end space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-8 border-gray-200"
-                        >
-                          <Eye className="w-3.5 h-3.5 mr-1.5" />
-                          Detail
-                        </Button>
-                        <Button
-                          size="sm"
-                          className={cn(
-                            "h-8 text-white",
-                            !p.check_in
-                              ? "bg-green-500 hover:bg-green-600"
-                              : "bg-gray-300 cursor-not-allowed",
-                          )}
-                          disabled={!!p.check_in}
-                        >
-                          <ArrowDownToLine className="w-3.5 h-3.5 mr-1.5" />
-                          In
-                        </Button>
-                        <Button
-                          size="sm"
-                          className={cn(
-                            "h-8 text-white",
-                            !p.check_out
-                              ? "bg-red-500 hover:bg-red-600"
-                              : "bg-gray-300 cursor-not-allowed",
-                          )}
-                          disabled={!!p.check_out}
-                        >
-                          <ArrowUpFromLine className="w-3.5 h-3.5 mr-1.5" />
-                          Out
-                        </Button>
-                      </div>
+                    <td className="px-5 py-4 text-right space-x-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleOpenDetail(p.participant_id)}
+                      >
+                        <Eye className="w-3 h-3 mr-1" /> Detail
+                      </Button>
+
+                      <Button
+                        size="sm"
+                        variant={p.raw_check_in ? "secondary" : "default"}
+                        className={cn(
+                          !p.raw_check_in &&
+                            "bg-green-600 hover:bg-green-700 text-white",
+                        )}
+                        disabled={!!p.raw_check_in}
+                      >
+                        <ArrowDownToLine className="w-3 h-3 mr-1" /> In
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={p.raw_check_out ? "secondary" : "default"}
+                        className={cn(
+                          !p.raw_check_out &&
+                            "bg-red-600 hover:bg-red-700 text-white",
+                        )}
+                        disabled={!!p.raw_check_out}
+                      >
+                        <ArrowUpFromLine className="w-3 h-3 mr-1" /> Out
+                      </Button>
                     </td>
                   </tr>
                 ))}
@@ -258,15 +456,59 @@ export default function RegistrationPage() {
           </table>
         </div>
 
-        {/* Pagination Skeleton */}
         <PaginationFooter
           currentPage={1}
           totalPage={1}
-          totalData={data?.total || 0}
+          totalData={filteredParticipants.length}
           onPrev={() => {}}
           onNext={() => {}}
         />
       </div>
+
+      {/* Modal Tambah Registrasi */}
+      <DynamicModal
+        title="Tambah Registrasi"
+        confirmLabel="Simpan"
+        showDates={false}
+        fields={fieldsTambahRegistrasi}
+        formState={form}
+        setFormState={handleSetFormState}
+        errors={errors}
+        isOpen={openCreateModal}
+        isLoading={loadingCreate}
+        onClose={() => {
+          setOpenCreateModal(false);
+          setForm(initialFormState);
+          setErrors(initialErrors);
+        }}
+        onConfirm={handleCreateRegistration}
+      />
+
+      {/* Modal Detail Registrasi (Murni Informasi Text) */}
+      <DynamicModal
+        mode="detail"
+        title="Detail Registrasi Peserta"
+        confirmLabel=""
+        showDates={false}
+        fields={detailFields}
+        formState={detailForm}
+        setFormState={() => {}}
+        errors={{}}
+        isOpen={openDetailModal}
+        isLoading={loadingDetail}
+        onClose={() => {
+          setOpenDetailModal(false);
+          setDetailForm({
+            name: "",
+            email: "",
+            company: "",
+            event_group_name: "",
+            status: "",
+            total_attendances: "",
+          });
+        }}
+        onConfirm={() => {}}
+      />
     </div>
   );
 }

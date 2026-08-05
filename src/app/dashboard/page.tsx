@@ -14,6 +14,9 @@ import {
   ChevronRight,
 } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
+import DynamicModal from "@/components/ui/Dynamic-Modal";
+
 import {
   GET_EVENT_GROUPS,
   GET_EVENTS,
@@ -28,6 +31,14 @@ type StatCard = {
   iconBg: string;
   iconClass: string;
 };
+
+const fieldsGrupEvent = [
+  {
+    name: "name",
+    label: "Nama Event",
+    placeholder: "Masukkan nama event",
+  },
+];
 
 export default function EventAdminDashboard() {
   const { data: eventGroupsRes } = useSWR(GET_EVENT_GROUPS());
@@ -48,13 +59,13 @@ export default function EventAdminDashboard() {
   const router = useRouter();
 
   const [openCreateModal, setOpenCreateModal] = useState(false);
+  const [loadingCreate, setLoadingCreate] = useState(false);
+
   const [form, setForm] = useState({
     name: "",
     start_date: "",
     end_date: "",
   });
-
-  const [loadingCreate, setLoadingCreate] = useState(false);
 
   const [errors, setErrors] = useState({
     name: "",
@@ -64,30 +75,15 @@ export default function EventAdminDashboard() {
   });
 
   const handleCreateEventGroup = async () => {
-    const newErrors = {
-      name: "",
-      start_date: "",
-      end_date: "",
-      api: "",
-    };
+    console.log("CLICK SIMPAN");
+    const newErrors = { name: "", start_date: "", end_date: "", api: "" };
 
-    if (!form.name.trim()) {
-      newErrors.name = "Nama event wajib diisi";
-    }
-
-    if (!form.start_date) {
-      newErrors.start_date = "Tanggal mulai wajib diisi";
-    }
-
-    if (!form.end_date) {
-      newErrors.end_date = "Tanggal selesai wajib diisi";
-    }
+    if (!form.name.trim()) newErrors.name = "Nama event wajib diisi";
+    if (!form.start_date) newErrors.start_date = "Tanggal mulai wajib diisi";
+    if (!form.end_date) newErrors.end_date = "Tanggal selesai wajib diisi";
 
     setErrors(newErrors);
-
-    if (newErrors.name || newErrors.start_date || newErrors.end_date) {
-      return;
-    }
+    if (newErrors.name || newErrors.start_date || newErrors.end_date) return;
 
     try {
       setLoadingCreate(true);
@@ -114,37 +110,21 @@ export default function EventAdminDashboard() {
 
       if (!res.ok) {
         setErrors({
-          name: "",
-          start_date: "",
-          end_date: "",
+          ...newErrors,
           api:
             response?.error || response?.message || "Gagal membuat event group",
         });
-
         return;
       }
 
       await mutate(GET_EVENT_GROUPS());
+      toast.success("Grup Event berhasil dibuat!");
 
-      setForm({
-        name: "",
-        start_date: "",
-        end_date: "",
-      });
-
-      setErrors({
-        name: "",
-        start_date: "",
-        end_date: "",
-        api: "",
-      });
-
+      setForm({ name: "", start_date: "", end_date: "" });
       setOpenCreateModal(false);
     } catch (error: any) {
       setErrors({
-        name: "",
-        start_date: "",
-        end_date: "",
+        ...newErrors,
         api: error?.message || "Terjadi kesalahan",
       });
     } finally {
@@ -155,72 +135,28 @@ export default function EventAdminDashboard() {
   const totalCheckIns = attendances.filter(
     (item: any) => item.type === "checkin",
   ).length;
-
   const totalCheckOuts = attendances.filter(
     (item: any) => item.type === "checkout",
   ).length;
-
-  // const recentEventGroups = eventGroups;
   const today = new Date();
 
   const recentEventGroups = [...eventGroups]
-    .filter((group: any) => {
-      // hanya tampilkan event yang belum selesai
-      return new Date(group.end_date) >= today;
-    })
+    .filter((group: any) => new Date(group.end_date) >= today)
     .sort((a: any, b: any) => {
       const aStart = new Date(a.start_date);
       const aEnd = new Date(a.end_date);
-
       const bStart = new Date(b.start_date);
       const bEnd = new Date(b.end_date);
 
       const aActive = aStart <= today && aEnd >= today;
       const bActive = bStart <= today && bEnd >= today;
 
-      // event aktif selalu di atas
       if (aActive && !bActive) return -1;
       if (!aActive && bActive) return 1;
 
-      // setelah itu urut berdasarkan tanggal mulai terdekat
       return aStart.getTime() - bStart.getTime();
     })
     .slice(0, 5);
-
-  useEffect(() => {
-    console.log("========== DASHBOARD DEBUG ==========");
-
-    console.log("EVENT GROUPS");
-    console.table(eventGroups);
-
-    console.log("EVENTS");
-    console.table(events);
-
-    console.log("REGISTRATIONS");
-    console.table(registrations);
-
-    console.log("ATTENDANCES");
-    console.table(attendances);
-
-    console.log("SUMMARY");
-    console.log("Total Event Groups:", totalEventGroups);
-    console.log("Total Events:", totalEvents);
-    console.log("Total Participants:", totalParticipants);
-    console.log("Total Checkins:", totalCheckIns);
-    console.log("Total Checkouts:", totalCheckOuts);
-
-    console.log("====================================");
-  }, [
-    eventGroups,
-    events,
-    registrations,
-    attendances,
-    totalEventGroups,
-    totalEvents,
-    totalParticipants,
-    totalCheckIns,
-    totalCheckOuts,
-  ]);
 
   const stats: StatCard[] = [
     {
@@ -269,25 +205,15 @@ export default function EventAdminDashboard() {
             . Berikut ringkasan acara Anda.
           </p>
         </div>
-        <button
-          className="flex items-center px-4 py-2 text-white font-semibold text-sm rounded-md shadow-sm transition-all active:scale-[0.99]"
-          style={{ backgroundColor: "var(--brand-primary)" }}
-          onMouseEnter={(e) =>
-            ((e.currentTarget as HTMLButtonElement).style.backgroundColor =
-              "var(--brand-light)")
-          }
-          onMouseLeave={(e) =>
-            ((e.currentTarget as HTMLButtonElement).style.backgroundColor =
-              "var(--brand-primary)")
-          }
-          onClick={() => setOpenCreateModal(true)}
-        >
+
+        {/* Tombol memicu modal menggunakan komponen Button custom */}
+        <Button size="lg" onClick={() => setOpenCreateModal(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Buat Grup Event
-        </button>
+        </Button>
       </div>
 
-      {/* Summary Cards — same style as eventfe-platform-fe */}
+      {/* Summary Cards */}
       <div className="flex flex-col space-y-3 md:flex-row md:space-y-0 md:space-x-4">
         {stats.map((stat, idx) => {
           const Icon = stat.icon;
@@ -318,7 +244,6 @@ export default function EventAdminDashboard() {
 
       {/* Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-        {/* Event Groups Table */}
         <div className="lg:col-span-2">
           <div className="card-base overflow-hidden">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50/50">
@@ -339,14 +264,11 @@ export default function EventAdminDashboard() {
 
             <div className="divide-y divide-gray-100">
               {recentEventGroups.map((group: any) => {
-                const today = new Date();
-
                 const status =
                   new Date(group.start_date) <= today &&
                   new Date(group.end_date) >= today
                     ? "Aktif"
                     : "Mendatang";
-
                 return (
                   <div
                     key={group.id}
@@ -365,14 +287,12 @@ export default function EventAdminDashboard() {
                       <p className="text-xs text-gray-400 mt-1">
                         {group._count?.registrations ?? 0} peserta
                       </p>
-
                       <p className="text-sm text-gray-500 mt-0.5 flex items-center gap-1">
                         <Calendar className="h-3.5 w-3.5" />
-                        {/* {group.dates} */}
-
-                        {new Date(group.start_date).toLocaleDateString("id-ID")}
-                        {" - "}
-                        {new Date(group.end_date).toLocaleDateString("id-ID")}
+                        {new Date(group.start_date).toLocaleDateString(
+                          "id-ID",
+                        )}{" "}
+                        - {new Date(group.end_date).toLocaleDateString("id-ID")}
                       </p>
                     </div>
 
@@ -400,9 +320,8 @@ export default function EventAdminDashboard() {
           </div>
         </div>
 
-        {/* Quick Actions */}
+        {/* Quick Actions & Mini Stats */}
         <div className="space-y-5">
-          {/* Download card */}
           <div
             className="rounded-md p-6 text-white relative overflow-hidden"
             style={{
@@ -427,20 +346,11 @@ export default function EventAdminDashboard() {
                 border: "1px solid rgba(255,255,255,0.2)",
                 color: "#fff",
               }}
-              onMouseEnter={(e) =>
-                ((e.currentTarget as HTMLButtonElement).style.backgroundColor =
-                  "rgba(255,255,255,0.2)")
-              }
-              onMouseLeave={(e) =>
-                ((e.currentTarget as HTMLButtonElement).style.backgroundColor =
-                  "rgba(255,255,255,0.12)")
-              }
             >
               Download CSV
             </button>
           </div>
 
-          {/* Stats mini card */}
           <div className="card-base p-5">
             <h3
               className="text-sm font-bold mb-3"
@@ -477,6 +387,7 @@ export default function EventAdminDashboard() {
               ].map((item) => (
                 <div key={item.label}>
                   <div className="flex justify-between text-sm mb-1">
+                    {/* PERBAIKAN: Menggunakan kurung tunggal agar tidak dianggap objek literal oleh TypeScript */}
                     <span className="text-gray-500 font-medium">
                       {item.label}
                     </span>
@@ -503,119 +414,35 @@ export default function EventAdminDashboard() {
         </div>
       </div>
 
-      {openCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-lg w-full max-w-md p-6">
-            <h2 className="text-lg font-bold mb-4">Buat Grup Event</h2>
+      {/* ─── IMPLEMENTASI REUSABLE DYNAMIC MODAL ─── */}
+      <DynamicModal
+        title="Buat Grup Event"
+        confirmLabel="Simpan"
+        showDates={true}
+        fields={fieldsGrupEvent}
+        formState={form}
+        setFormState={setForm}
+        errors={errors}
+        isOpen={openCreateModal}
+        isLoading={loadingCreate}
+        onClose={() => {
+          setOpenCreateModal(false);
 
-            <div className="space-y-4">
-              {errors.api && (
-                <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
-                  {errors.api}
-                </div>
-              )}
+          setForm({
+            name: "",
+            start_date: "",
+            end_date: "",
+          });
 
-              <div>
-                <input
-                  type="text"
-                  placeholder="Nama Event"
-                  value={form.name}
-                  onChange={(e) => {
-                    setForm({
-                      ...form,
-                      name: e.target.value,
-                    });
-
-                    setErrors({
-                      ...errors,
-                      name: "",
-                    });
-                  }}
-                  className={`w-full rounded px-3 py-2 border ${
-                    errors.name ? "border-red-500" : "border-gray-300"
-                  }`}
-                />
-
-                {errors.name && (
-                  <p className="mt-1 text-xs text-red-500">{errors.name}</p>
-                )}
-              </div>
-
-              <div>
-                <input
-                  type="datetime-local"
-                  value={form.start_date}
-                  onChange={(e) => {
-                    setForm({
-                      ...form,
-                      start_date: e.target.value,
-                    });
-
-                    setErrors({
-                      ...errors,
-                      start_date: "",
-                    });
-                  }}
-                  className={`w-full rounded px-3 py-2 border ${
-                    errors.start_date ? "border-red-500" : "border-gray-300"
-                  }`}
-                />
-
-                {errors.start_date && (
-                  <p className="mt-1 text-xs text-red-500">
-                    {errors.start_date}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <input
-                  type="datetime-local"
-                  value={form.end_date}
-                  onChange={(e) => {
-                    setForm({
-                      ...form,
-                      end_date: e.target.value,
-                    });
-
-                    setErrors({
-                      ...errors,
-                      end_date: "",
-                    });
-                  }}
-                  className={`w-full rounded px-3 py-2 border ${
-                    errors.end_date ? "border-red-500" : "border-gray-300"
-                  }`}
-                />
-
-                {errors.end_date && (
-                  <p className="mt-1 text-xs text-red-500">{errors.end_date}</p>
-                )}
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2 mt-6">
-              <button
-                onClick={() => setOpenCreateModal(false)}
-                className="px-4 py-2 border rounded-md"
-              >
-                Batal
-              </button>
-
-              <button
-                onClick={handleCreateEventGroup}
-                disabled={loadingCreate}
-                className="px-4 py-2 text-white rounded-md"
-                style={{
-                  backgroundColor: "var(--brand-primary)",
-                }}
-              >
-                {loadingCreate ? "Menyimpan..." : "Simpan"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          setErrors({
+            name: "",
+            start_date: "",
+            end_date: "",
+            api: "",
+          });
+        }}
+        onConfirm={handleCreateEventGroup}
+      />
     </div>
   );
 }

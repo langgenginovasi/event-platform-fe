@@ -7,11 +7,36 @@ export const GET_EVENT_GROUPS = () => `/event-groups`;
 export const GET_EVENT_GROUP_DETAIL = (id: string) => `/event-groups/${id}`;
 
 // ─── Events ─────────────────────────────────────────────────────────────────
+// export const GET_EVENTS = () => `/events`;
+// ─── Events ─────────────────────────────────────────────────────────────────
+export const GET_EVENTS_ALL = (eventGroupId?: string) =>
+  `/events?event_group_id=${eventGroupId}`;
+
+export const POST_EVENTS = () => `/events`;
 export const GET_EVENTS = () => `/events`;
 
+export const MUTATE_EVENT = () => `/events`;
+export const MUTATE_EVENT_DETAIL = (id: string | number) => `/events/${id}`;
+
+// ─── Registrations (Participants) ───────────────────────────────────────────
 // ─── Registrations (Participants) ───────────────────────────────────────────
 export const GET_REGISTRATIONS = (eventId?: number) =>
   eventId ? `/registrations?event_id=${eventId}` : `/registrations`;
+
+export const GET_REGISTRATIONS_BY_GROUP = (eventGroupId: string) =>
+  `/registrations?event_group_id=${eventGroupId}`;
+
+export const GET_REGISTRATIONS_BY_EVENT = (eventId: string | number) =>
+  `/registrations?event_id=${eventId}`;
+
+// 1. Endpoint khusus untuk membuat (POST) Registrasi Baru
+export const POST_REGISTRATION = () => `/registrations`;
+
+export const MUTATE_REGISTRATION_DETAIL = (id: string | number) =>
+  `/registrations/${id}`;
+
+export const GET_REGISTRATION_DETAIL_BY_PARTICIPANT = (participantId: string) =>
+  `/registrations?participant_id=${participantId}`;
 
 // ─── Attendances ────────────────────────────────────────────────────────────
 export const GET_ATTENDANCES = (sessionId?: number) =>

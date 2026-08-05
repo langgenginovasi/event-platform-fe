@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
+import { useSession } from "next-auth/react";
 
 export default function SettingsPage() {
   const [name, setName] = useState("");
@@ -14,11 +15,17 @@ export default function SettingsPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const { data: session } = useSession();
 
   const fetchProfile = async () => {
     try {
       setLoading(true);
-      const res = await axios.get("http://localhost:3001/api/profile/me", { withCredentials: true });
+      const res = await axios.get("http://localhost:3001/api/profile/me", {
+        // withCredentials: true,
+        headers: {
+          Authorization: `Bearer ${session?.user?.accessToken}`,
+        },
+      });
       setName(res.data.data.name);
       setEmail(res.data.data.email);
     } catch (error) {
@@ -38,7 +45,7 @@ export default function SettingsPage() {
       toast.error("Nama tidak boleh kosong");
       return;
     }
-    
+
     try {
       setSaving(true);
       const payload: any = { name };
@@ -51,7 +58,9 @@ export default function SettingsPage() {
         payload.password = password;
       }
 
-      await axios.put("http://localhost:3001/api/profile/me", payload, { withCredentials: true });
+      await axios.put("http://localhost:3001/api/profile/me", payload, {
+        withCredentials: true,
+      });
       toast.success("Profil berhasil diperbarui!");
       setPassword(""); // clear password field after successful update
     } catch (error) {
@@ -74,10 +83,12 @@ export default function SettingsPage() {
     <div className="space-y-6 max-w-2xl mx-auto">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Pengaturan Profil</h1>
-        <p className="text-gray-500 text-sm">Kelola informasi pribadi dan keamanan akun Anda.</p>
+        <p className="text-gray-500 text-sm">
+          Kelola informasi pribadi dan keamanan akun Anda.
+        </p>
       </div>
 
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         className="card-base p-6 md:p-8 rounded-2xl"
@@ -87,9 +98,11 @@ export default function SettingsPage() {
             <h3 className="text-lg font-semibold border-b pb-2 flex items-center gap-2">
               <UserIcon className="w-5 h-5 text-blue-600" /> Informasi Pribadi
             </h3>
-            
+
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Alamat Email (Tidak dapat diubah)</label>
+              <label className="text-sm font-medium text-gray-700">
+                Alamat Email (Tidak dapat diubah)
+              </label>
               <Input
                 value={email}
                 disabled
@@ -98,7 +111,9 @@ export default function SettingsPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Nama Lengkap</label>
+              <label className="text-sm font-medium text-gray-700">
+                Nama Lengkap
+              </label>
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -112,9 +127,11 @@ export default function SettingsPage() {
             <h3 className="text-lg font-semibold border-b pb-2 flex items-center gap-2">
               <Lock className="w-5 h-5 text-blue-600" /> Keamanan Akun
             </h3>
-            
+
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Ganti Password (Opsional)</label>
+              <label className="text-sm font-medium text-gray-700">
+                Ganti Password (Opsional)
+              </label>
               <Input
                 type="password"
                 value={password}
@@ -122,13 +139,15 @@ export default function SettingsPage() {
                 placeholder="Kosongkan jika tidak ingin mengubah password"
                 className="focus-visible:ring-blue-600"
               />
-              <p className="text-xs text-gray-500">Minimal 6 karakter jika ingin mengganti password.</p>
+              <p className="text-xs text-gray-500">
+                Minimal 6 karakter jika ingin mengganti password.
+              </p>
             </div>
           </div>
 
           <div className="pt-6 flex justify-end">
-            <Button 
-              onClick={handleSave} 
+            <Button
+              onClick={handleSave}
               disabled={saving}
               className="btn-primary w-full md:w-auto px-8 shadow-lg hover-lift"
             >
