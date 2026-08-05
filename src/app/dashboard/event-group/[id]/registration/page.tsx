@@ -39,26 +39,6 @@ import { TableBodyStates } from "@/components/shared/TableBodyStates";
 export default function RegistrationPage() {
   const { id } = useParams() as { id: string };
   const { can } = usePermissions();
-  const { data: session } = useSession();
-
-  const [keyword, setKeyword] = useState("");
-  const eventGroupId = params?.id as string;
-
-  // SWR Fetch data utama tabel
-  const {
-    data: serverData,
-    error,
-    isLoading,
-    mutate,
-  } = useSWR<RegistrationResponse>(
-    eventGroupId ? GET_REGISTRATIONS_BY_GROUP(eventGroupId) : null,
-  );
-
-  // States Modal Create
-  const [openCreateModal, setOpenCreateModal] = useState(false);
-  const [loadingCreate, setLoadingCreate] = useState(false);
-  const [form, setForm] = useState<FormState>(initialFormState);
-  const [errors, setErrors] = useState(initialErrors);
 
   const reg = useRegistrationActions(id);
 
