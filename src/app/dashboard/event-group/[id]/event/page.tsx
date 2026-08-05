@@ -20,24 +20,29 @@ import {
 import { Button } from "@/components/ui/button";
 import { usePermissions } from "@/hooks/usePermissions";
 import { cn } from "@/lib/utils";
-import { StatCard } from "@/components/dashboard/StatCard";
-import { TableToolbar } from "@/components/dashboard/TableToolbar";
-import { PaginationFooter } from "@/components/dashboard/PaginationFooter";
+import { StatCard } from "@/components/shared/StatCard";
+import { TableToolbar } from "@/components/shared/TableToolbar";
+import { PaginationFooter } from "@/components/shared/PaginationFooter";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CardContent } from "@/components/ui/card";
-import { TableCard } from "@/components/dashboard/CustomCards";
+import { TableCard } from "@/components/shared/CustomCards";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogBody,
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
-import { GET_EVENTS } from "@/lib/api-endpoints";
+import { GET_EVENTS, GET_EVENT_GROUP_DETAIL } from "@/lib/api-endpoints";
+import { ConfirmationDialog } from "@/components/shared/ConfirmationDialog";
+import { formatDateTime } from "@/lib/utils";
+import { useDeleteConfirmation } from "@/hooks/useDeleteConfirmation";
+import { TableBodyStates } from "@/components/shared/TableBodyStates";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 interface EventItem {
@@ -45,6 +50,8 @@ interface EventItem {
   name: string;
   start_datetime: string;
   end_datetime: string;
+  checkin_count?: number;
+  checkout_count?: number;
 }
 
 // ─── Page ───────────────────────────────────────────────────────────────────
@@ -64,10 +71,24 @@ export default function EventPage() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // ── Delete ──────────────────────────────────────────────────────
+  const deleteConfirmation = useDeleteConfirmation({
+    onDelete: async (eventId) => {
+      await api.delete(`/events/${eventId}`);
+      mutate();
+    },
+    successMessage: "Event berhasil dihapus",
+    errorMessage: "Gagal menghapus event",
+  });
+
   // SWR fetch
   const { data, error, isLoading, mutate } = useSWR<{ data: EventItem[]; meta: any }>(
     GET_EVENTS(id, currentPage, 10, keyword)
   );
+
+  // Fetch event group detail for total registration count
+  const { data: groupDetail } = useSWR<{ data: any }>(GET_EVENT_GROUP_DETAIL(id));
+  const totalRegistrations = groupDetail?.data?._count?.registrations ?? 0;
 
   const handleOpenModal = (event?: EventItem) => {
     if (event) {
@@ -111,17 +132,6 @@ export default function EventPage() {
     }
   };
 
-  const handleDelete = async (eventId: string) => {
-    if (!confirm("Apakah Anda yakin ingin menghapus event ini?")) return;
-    try {
-      await api.delete(`/events/${eventId}`);
-      toast.success("Event berhasil dihapus");
-      mutate();
-    } catch (err: any) {
-      toast.error(err.message || "Gagal menghapus event");
-    }
-  };
-
   return (
     <div className="flex flex-col space-y-7 md:space-y-10 pb-20 md:pb-0">
       {/* ── Summary Card ─────────────────────────────────────────────── */}
@@ -143,7 +153,6 @@ export default function EventPage() {
               <Button
                 onClick={() => handleOpenModal()}
                 className="whitespace-nowrap w-full"
-                style={{ backgroundColor: "var(--brand-primary)" }}
               >
                 <Plus className="w-4 h-4 mr-1" />
                 Tambah Event
@@ -169,17 +178,13 @@ export default function EventPage() {
                 <TableHead>
                   <div className="flex items-center cursor-pointer group">Waktu Selesai <ArrowUpDown className="ml-2 h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" /></div>
                 </TableHead>
+                <TableHead className="text-center">Check-in</TableHead>
+                <TableHead className="text-center">Check-out</TableHead>
                 <TableHead className="text-right">Opsi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading && (
-                <TableRow>
-                  <TableCell colSpan={5} className="h-32 text-center">
-                    <Loader2 className="w-6 h-6 animate-spin mx-auto text-muted-foreground" />
-                  </TableCell>
-                </TableRow>
-              )}
+              <TableBodyStates isLoading={isLoading} isEmpty={data?.data?.length === 0} colSpan={7} emptyMessage="Tidak ada data event" />
 
               {!isLoading &&
                 data?.data?.map((event) => (
@@ -189,10 +194,20 @@ export default function EventPage() {
                     </TableCell>
                     <TableCell className="font-semibold text-foreground">{event.name}</TableCell>
                     <TableCell className="text-muted-foreground">
-                      {new Date(event.start_datetime).toLocaleString("id-ID")}
+                      {formatDateTime(event.start_datetime)}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {new Date(event.end_datetime).toLocaleString("id-ID")}
+                      {formatDateTime(event.end_datetime)}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        {event.checkin_count ?? 0}/{totalRegistrations}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                        {event.checkout_count ?? 0}/{totalRegistrations}
+                      </span>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end space-x-2">
@@ -207,7 +222,7 @@ export default function EventPage() {
                             variant="outline"
                             size="sm"
                             className="text-destructive border-destructive/20 hover:bg-destructive/10 hover:text-destructive"
-                            onClick={() => handleDelete(event.id)}
+                            onClick={() => deleteConfirmation.openDelete(event.id)}
                           >
                             <Trash2 className="w-3.5 h-3.5 mr-1.5" />
                             Hapus
@@ -217,14 +232,6 @@ export default function EventPage() {
                     </TableCell>
                   </TableRow>
                 ))}
-
-              {!isLoading && (!data?.data || data.data.length === 0) && (
-                <TableRow>
-                  <TableCell colSpan={5} className="h-32 text-center text-muted-foreground text-sm">
-                    Tidak ada data event
-                  </TableCell>
-                </TableRow>
-              )}
             </TableBody>
           </Table>
         </div>
@@ -236,43 +243,46 @@ export default function EventPage() {
           totalData={data?.meta?.total || 0}
           onPrev={() => setCurrentPage((p) => Math.max(1, p - 1))}
           onNext={() => setCurrentPage((p) => Math.min(data?.meta?.total_pages || 1, p + 1))}
+          onPageChange={(page) => setCurrentPage(page)}
         />
       </TableCard>
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>{editingEvent ? "Edit Event" : "Tambah Event"}</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4 py-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Nama Event</label>
-              <Input
-                required
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Masukkan nama event"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Waktu Mulai</label>
-              <Input
-                required
-                type="datetime-local"
-                value={formData.start_datetime}
-                onChange={(e) => setFormData({ ...formData, start_datetime: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Waktu Selesai</label>
-              <Input
-                required
-                type="datetime-local"
-                value={formData.end_datetime}
-                onChange={(e) => setFormData({ ...formData, end_datetime: e.target.value })}
-              />
-            </div>
-            <DialogFooter className="pt-4">
+          <form onSubmit={handleSubmit}>
+            <DialogBody className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Nama Event</label>
+                <Input
+                  required
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="Masukkan nama event"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Waktu Mulai</label>
+                <Input
+                  required
+                  type="datetime-local"
+                  value={formData.start_datetime}
+                  onChange={(e) => setFormData({ ...formData, start_datetime: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Waktu Selesai</label>
+                <Input
+                  required
+                  type="datetime-local"
+                  value={formData.end_datetime}
+                  onChange={(e) => setFormData({ ...formData, end_datetime: e.target.value })}
+                />
+              </div>
+            </DialogBody>
+            <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
                 Batal
               </Button>
@@ -284,6 +294,18 @@ export default function EventPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* ── Confirmation Dialog: Hapus Event ────────────────── */}
+      <ConfirmationDialog
+        open={deleteConfirmation.isOpen}
+        onOpenChange={deleteConfirmation.setIsOpen}
+        title="Hapus Event"
+        description="Apakah Anda yakin ingin menghapus event ini? Semua data terkait juga akan dihapus. Tindakan ini tidak dapat dibatalkan."
+        confirmText="Hapus"
+        variant="danger"
+        isLoading={deleteConfirmation.isDeleting}
+        onConfirm={deleteConfirmation.confirmDelete}
+      />
     </div>
   );
 }

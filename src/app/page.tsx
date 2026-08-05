@@ -6,6 +6,7 @@ import { signIn, useSession } from "next-auth/react";
 import { Eye, EyeOff } from "lucide-react";
 import { useEffect } from "react";
 import Image from "next/image";
+import { Button } from "@/components/ui/button";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -58,11 +59,11 @@ export default function LoginPage() {
         <div className="relative z-10 flex flex-col items-center text-center w-full">
           {/* Logo placeholder */}
           <div className="mb-8 p-6 bg-white/10 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/20">
-            <Image 
-              src="/logo-horizontal.png" 
-              alt="Event Platform Logo" 
-              width={280} 
-              height={100} 
+            <Image
+              src="/logo-horizontal-white.png"
+              alt="Event Platform Logo"
+              width={280}
+              height={100}
               className="object-contain"
             />
           </div>
@@ -152,23 +153,11 @@ export default function LoginPage() {
 
             {/* Submit */}
             <div className="pt-2">
-              <button
+              <Button
                 type="submit"
                 disabled={loading}
-                className="w-full text-white font-semibold rounded-md text-sm py-3 px-5 text-center shadow-md transition-all active:scale-[0.99] flex items-center justify-center min-h-[44px] disabled:cursor-not-allowed"
-                style={{
-                  backgroundColor: loading ? "#9ca3af" : "var(--brand-primary)",
-                }}
-                onMouseEnter={(e) => {
-                  if (!loading)
-                    (e.currentTarget as HTMLButtonElement).style.backgroundColor =
-                      "var(--brand-light)";
-                }}
-                onMouseLeave={(e) => {
-                  if (!loading)
-                    (e.currentTarget as HTMLButtonElement).style.backgroundColor =
-                      "var(--brand-primary)";
-                }}
+                className="w-full"
+                size="lg"
               >
                 {loading ? (
                   <svg
@@ -194,7 +183,7 @@ export default function LoginPage() {
                 ) : (
                   "Masuk"
                 )}
-              </button>
+              </Button>
             </div>
           </form>
         </div>

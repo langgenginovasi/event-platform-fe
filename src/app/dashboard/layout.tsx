@@ -17,7 +17,6 @@ import {
   QrCode,
   BarChart,
   ChevronLeft,
-  Clock,
 } from "lucide-react";
 import {
   Sheet,
@@ -50,8 +49,8 @@ const globalEventAdminNav: NavItem[] = [
 const getWorkspaceNav = (id: string): NavItem[] => [
   { name: "Overview", href: `/dashboard/event-group/${id}`, icon: LayoutDashboard },
   { name: "Event", href: `/dashboard/event-group/${id}/event`, icon: CalendarDays },
-  { name: "Sesi", href: `/dashboard/event-group/${id}/session`, icon: Clock },
   { name: "Registrasi", href: `/dashboard/event-group/${id}/registration`, icon: ClipboardList },
+  { name: "Participation Types", href: `/dashboard/event-group/${id}/participation-types`, icon: Settings },
   { name: "Scan QR", href: `/dashboard/event-group/${id}/scan`, icon: QrCode },
   { name: "Laporan", href: `/dashboard/event-group/${id}/export`, icon: BarChart },
 ];

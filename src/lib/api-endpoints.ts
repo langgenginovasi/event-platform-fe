@@ -33,6 +33,7 @@ export const GET_REGISTRATIONS = (eventGroupId?: string, page = 1, limit = 10, s
   if (order) params.append("order", order);
   return `/registrations?${params.toString()}`;
 };
+export const GET_REGISTRATION_DETAIL = (id: string) => `/registrations/${id}`;
 
 // ─── Attendances ────────────────────────────────────────────────────────────
 export const GET_ATTENDANCES = (eventId?: string, eventGroupId?: string, registrationId?: string) => {
@@ -69,4 +70,13 @@ export const GET_PARTICIPANTS = (page = 1, limit = 10, search = "", not_in_event
 };
 export const GET_PARTICIPANT_DETAIL = (id: string) => `/participants/${id}`;
 export const GET_PARTICIPANT_HISTORY = (id: string) => `/participants/${id}/history`;
+
+// ─── Membership Types ────────────────────────────────────────────────────────
+export const GET_MEMBERSHIP_TYPES = () => `/membership-types`;
+
+// ─── Participation Types ─────────────────────────────────────────────────────
+export const GET_PARTICIPATION_TYPES = () => `/participation-types`;
+
+// ─── Event Group Participation Types ─────────────────────────────────────────
+export const GET_EVENT_GROUP_PARTICIPATION_TYPES = (eventGroupId: string) => `/event-groups/${eventGroupId}/participation-types`;
 

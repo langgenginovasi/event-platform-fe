@@ -2,26 +2,45 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { extractApiError } from "@/lib/utils";
 import { Plus, Search, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { TableCard } from "@/components/dashboard/CustomCards";
+import { TableCard } from "@/components/shared/CustomCards";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ConfirmationDialog } from "@/components/shared/ConfirmationDialog";
+import { useDeleteConfirmation } from "@/hooks/useDeleteConfirmation";
+import { TableBodyStates } from "@/components/shared/TableBodyStates";
 
 interface User {
   id: string;
   name: string;
   email: string;
   role: string;
-  created_at: string;
 }
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newUser, setNewUser] = useState({ name: "", email: "", password: "", role: "OPERATOR" });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // ── Delete ──────────────────────────────────────────────────────
+  const [deleteTargetName, setDeleteTargetName] = useState("");
+  const deleteConfirmation = useDeleteConfirmation({
+    onDelete: async (id) => {
+      await api.delete(`/users/${id}`);
+      fetchUsers();
+    },
+    successMessage: "Pengguna berhasil dihapus!",
+    errorMessage: "Gagal menghapus pengguna.",
+  });
 
   const fetchUsers = async () => {
     try {
@@ -45,6 +64,32 @@ export default function UsersPage() {
     u.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const handleAddUser = async () => {
+    if (!newUser.name || !newUser.email || !newUser.password) {
+      toast.warning("Semua field harus diisi.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await api.post("/users", newUser);
+      toast.success("Pengguna berhasil ditambahkan!");
+      setShowAddModal(false);
+      setNewUser({ name: "", email: "", password: "", role: "OPERATOR" });
+      fetchUsers();
+    } catch (error: any) {
+      const message = extractApiError(error, "Gagal menambahkan pengguna.");
+      toast.error(message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteUser = (userId: string, userName: string) => {
+    setDeleteTargetName(userName);
+    deleteConfirmation.openDelete(userId);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -52,7 +97,7 @@ export default function UsersPage() {
           <h1 className="text-2xl font-bold text-gray-900">Manajemen Pengguna</h1>
           <p className="text-gray-500 text-sm">Kelola admin dan operator sistem.</p>
         </div>
-        <Button className="gap-2 w-full md:w-auto">
+        <Button className="gap-2 w-full md:w-auto" onClick={() => setShowAddModal(true)}>
           <Plus className="w-4 h-4" /> Tambah Pengguna
         </Button>
       </div>
@@ -85,23 +130,9 @@ export default function UsersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="h-32 text-center text-muted-foreground">
-                      <div className="flex justify-center items-center gap-2">
-                        <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                        Memuat data...
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ) : filteredUsers.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="h-32 text-center text-muted-foreground">
-                      Tidak ada pengguna ditemukan.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredUsers.map((user) => (
+                <TableBodyStates isLoading={loading} isEmpty={filteredUsers.length === 0} colSpan={4} emptyMessage="Tidak ada pengguna ditemukan." />
+
+                {!loading && filteredUsers.map((user) => (
                     <TableRow key={user.id}>
                       <TableCell className="font-medium text-foreground">{user.name}</TableCell>
                       <TableCell className="text-muted-foreground">{user.email}</TableCell>
@@ -115,18 +146,101 @@ export default function UsersPage() {
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/10">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => handleDeleteUser(user.id, user.name)}
+                        >
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
+                  ))}
               </TableBody>
             </Table>
           </div>
         </TableCard>
       </motion.div>
+
+      {/* Add User Modal */}
+      <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Tambah Pengguna Baru</DialogTitle>
+            <p className="text-sm text-muted-foreground">
+              Masukkan detail pengguna baru. Password minimal 6 karakter.
+            </p>
+          </DialogHeader>
+          <DialogBody className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Nama Lengkap</label>
+              <Input
+                placeholder="Contoh: John Doe"
+                value={newUser.name}
+                onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Email</label>
+              <Input
+                type="email"
+                placeholder="john@example.com"
+                value={newUser.email}
+                onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Password</label>
+              <Input
+                type="password"
+                placeholder="Minimal 6 karakter"
+                value={newUser.password}
+                onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Role</label>
+              <Select
+                items={[
+                  { value: "OPERATOR", label: "OPERATOR" },
+                  { value: "EVENT_ADMIN", label: "EVENT_ADMIN" },
+                  { value: "SUPER_ADMIN", label: "SUPER_ADMIN" },
+                ]}
+                value={newUser.role}
+                onValueChange={(v) => setNewUser({ ...newUser, role: v as string })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih Role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="OPERATOR">OPERATOR</SelectItem>
+                  <SelectItem value="EVENT_ADMIN">EVENT_ADMIN</SelectItem>
+                  <SelectItem value="SUPER_ADMIN">SUPER_ADMIN</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddModal(false)}>Batal</Button>
+            <Button onClick={handleAddUser} disabled={isSubmitting}>
+              {isSubmitting ? "Menyimpan..." : "Simpan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Confirmation Dialog: Hapus Pengguna ────────────────── */}
+      <ConfirmationDialog
+        open={deleteConfirmation.isOpen}
+        onOpenChange={deleteConfirmation.setIsOpen}
+        title="Hapus Pengguna"
+        description={`Apakah Anda yakin ingin menghapus pengguna "${deleteTargetName}"? Tindakan ini tidak dapat dibatalkan.`}
+        confirmText="Hapus"
+        variant="danger"
+        isLoading={deleteConfirmation.isDeleting}
+        onConfirm={deleteConfirmation.confirmDelete}
+      />
     </div>
   );
 }

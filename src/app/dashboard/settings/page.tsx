@@ -1,15 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-import { User as UserIcon, Lock, Save } from "lucide-react";
+import { User as UserIcon, Lock, Save, Users, Tags } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { GlassCard } from "@/components/dashboard/CustomCards";
+import { GlassCard } from "@/components/shared/CustomCards";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 
 export default function SettingsPage() {
+  const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -149,8 +151,7 @@ export default function SettingsPage() {
                 <Button 
                   onClick={handleSave} 
                   disabled={saving}
-                  className="w-full md:w-auto px-8 shadow-lg text-white"
-                  style={{ backgroundColor: "var(--brand-primary)" }}
+                  className="w-full md:w-auto px-8 shadow-lg"
                 >
                   {saving ? (
                     <div className="flex items-center gap-2">
@@ -177,9 +178,24 @@ export default function SettingsPage() {
                 </div>
                 <h3 className="text-lg font-semibold">Preferensi Aplikasi</h3>
                 <p className="text-sm text-gray-500 max-w-sm">
-                  Pengaturan terkait bahasa, zona waktu, dan preferensi antarmuka pengguna sedang dalam pengembangan.
+                  Kelola jenis keanggotaan dan partisipasi yang digunakan dalam sistem.
                 </p>
-                <Button variant="outline" disabled>Segera Hadir</Button>
+                <div className="flex flex-col sm:flex-row gap-3 mt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => router.push("/dashboard/settings/membership-types")}
+                  >
+                    <Users className="w-4 h-4 mr-2" />
+                    Membership Types
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => router.push("/dashboard/settings/participation-types")}
+                  >
+                    <Tags className="w-4 h-4 mr-2" />
+                    Participation Types
+                  </Button>
+                </div>
               </div>
             </div>
           </GlassCard>

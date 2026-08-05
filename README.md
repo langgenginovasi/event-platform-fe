@@ -1,36 +1,107 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Event Platform Frontend (V2)
 
-## Getting Started
+Frontend untuk **Event Platform V2** — sistem manajemen acara dan absensi digital berbasis *Event Group Workspace*. Repositori ini adalah pengganti frontend V1 (yang terikat dengan response Strapi) dengan arsitektur decoupled yang berkomunikasi dengan backend Fastify melalui REST API.
 
-First, run the development server:
+## Tech Stack
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+| Layer | Teknologi |
+|-------|-----------|
+| Framework | Next.js 16 App Router + TypeScript |
+| Styling | Tailwind CSS v4 + Glassmorphism UI |
+| Data Fetching | SWR + Axios |
+| Auth | NextAuth v4 (Credentials Provider, JWT) |
+| UI Components | shadcn/ui, @base-ui/react, lucide-react |
+| Chart & Export | Recharts, xlsx |
+| QR Scanner | html5-qrcode |
+
+## Prasyarat
+
+- Node.js 20+
+- Backend **event-platform-be** sudah berjalan di `http://localhost:3001`
+
+## Setup Lokal
+
+1. Clone repo dan install dependencies:
+
+   ```bash
+   npm install
+   ```
+
+2. Salin `.env.example` menjadi `.env` lalu sesuaikan:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+   ```env
+   NEXT_PUBLIC_API_URL="http://localhost:3001/api"
+   NEXTAUTH_SECRET="super-secret-nextauth-key-change-in-production"
+   NEXTAUTH_URL="http://localhost:3000"
+   ```
+
+   > Ganti `NEXT_PUBLIC_API_URL` dengan URL backend saat deployment.
+
+3. Jalankan development server:
+
+   ```bash
+   npm run dev
+   ```
+
+   Buka `http://localhost:3000` untuk mengakses aplikasi.
+
+## Scripts
+
+| Script | Deskripsi |
+|--------|-----------|
+| `npm run dev` | Development server dengan hot-reload |
+| `npm run build` | Production build |
+| `npm run start` | Menjalankan production build |
+| `npm run lint` | ESLint |
+
+## Struktur Folder
+
+```
+event-platform-fe/
+├── public/                        # Static assets
+├── src/
+│   ├── app/                       # Next.js App Router (routing)
+│   │   ├── layout.tsx             # Root layout (Server Component)
+│   │   ├── page.tsx               # Login page
+│   │   ├── globals.css            # Global styles
+│   │   ├── api/auth/[...nextauth]/route.ts   # NextAuth handler
+│   │   └── dashboard/             # Dashboard shell + feature pages
+│   ├── components/
+│   │   ├── ui/                    # Layer 1: shadcn/ui primitives
+│   │   ├── shared/                # Layer 2: App-wide reusable components
+│   │   └── features/              # Layer 3: Domain-specific components
+│   ├── hooks/                     # Custom React hooks (usePermissions, use*Actions)
+│   ├── lib/                       # API client, fetcher, api-endpoints, helpers
+│   └── types/                     # TypeScript type definitions
+└── docs/STRUCTURE.md              # Aturan struktur & coding patterns
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Fitur Dashboard
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Dashboard bersifat *context-aware* berdasarkan Event Group workspace:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Event Group** — daftar & pembuatan Event Group (workspace)
+- **Workspace Overview** — statistik, chart, dan pengaturan email
+- **Registration** — registrasi peserta, bulk action, check-in/check-out, kirim email tiket QR
+- **Event & Session** — manajemen sub-event dan sesi
+- **Scan** — pemindaian QR code peserta dengan kamera
+- **Export** — ekspor data registrasi/absensi ke Excel
+- **Participant** — data master peserta (global)
+- **Users** — manajemen user (Super Admin)
+- **Settings** — akun, membership types, participation types
 
-## Learn More
+## Akun Login
 
-To learn more about Next.js, take a look at the following resources:
+Gunakan akun seed dari backend (password: `password123`):
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `superadmin@event.local` — SUPER_ADMIN
+- `admin@event.local` — EVENT_ADMIN
+- `operator@event.local` — OPERATOR
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Lisensi
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+TBD — kontak pemilik repositori untuk detail lisensi.
