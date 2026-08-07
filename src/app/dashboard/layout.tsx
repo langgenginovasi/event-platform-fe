@@ -17,6 +17,7 @@ import {
   QrCode,
   BarChart,
   ChevronLeft,
+  Zap,
 } from "lucide-react";
 import {
   Sheet,
@@ -38,6 +39,7 @@ type NavItem = {
 const superAdminExtras: NavItem[] = [
   { name: "Manajemen Pengguna", href: "/dashboard/users", icon: Users },
   { name: "Pengaturan", href: "/dashboard/settings", icon: Settings },
+  { name: "Pengujian", href: "/dashboard/testing", icon: Zap },
 ];
 
 const globalEventAdminNav: NavItem[] = [
