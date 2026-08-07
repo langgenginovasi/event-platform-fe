@@ -13,6 +13,7 @@ import {
   GET_PARTICIPANTS,
   GET_EVENTS,
   GET_EVENT_GROUP_PARTICIPATION_TYPES,
+  UPDATE_REGISTRATION,
 } from "@/lib/api-endpoints";
 
 export interface RegistrationItem {
@@ -82,6 +83,11 @@ export function useRegistrationActions(eventGroupId: string) {
   const [deleteTargetIds, setDeleteTargetIds] = useState<string[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // ── STATE UNTUK EDIT REGISTRATION ──────────────────────────────
+  const [editingRegId, setEditingRegId] = useState<string | null>(null);
+  const [editParticipationValue, setEditParticipationValue] = useState<string>("");
+  const [loadingEditId, setLoadingEditId] = useState<string | null>(null);
+
   // Reset accordion when detail modal opens
   useEffect(() => {
     if (isDetailModalOpen) setExpandedEvents({});
@@ -149,11 +155,16 @@ export function useRegistrationActions(eventGroupId: string) {
   const { data: eventsData } = useSWR<{ data: any[] }>(GET_EVENTS(eventGroupId, 1, 100));
   const totalEvents = eventsData?.data?.length ?? 0;
 
-  // Fetch participation types for this event group
+  // Fetch participation types for this event group (always fetched for inline edit)
   const { data: participationTypesRes } = useSWR<{ data: any[] }>(
-    isAddModalOpen ? GET_EVENT_GROUP_PARTICIPATION_TYPES(eventGroupId) : null
+    GET_EVENT_GROUP_PARTICIPATION_TYPES(eventGroupId)
   );
-  const participationTypes = participationTypesRes?.data || [];
+  const participationTypes = (participationTypesRes?.data || []).map((pt: any) => ({
+    id: pt.participation_type?.id || pt.id,
+    name: pt.participation_type?.name || pt.name,
+    slug: pt.participation_type?.slug || pt.slug,
+    is_active: pt.is_active,
+  }));
 
   // Fetch unregistered participants for checklist
   const { data: unregisteredData, mutate: mutateUnregistered } = useSWR<{ data: any[]; meta: any }>(
@@ -399,6 +410,38 @@ export function useRegistrationActions(eventGroupId: string) {
     }
   };
 
+  // ── EDIT REGISTRATION HANDLERS ─────────────────────────────────
+  const handleStartInlineEdit = (registration: RegistrationItem) => {
+    setEditingRegId(registration.id);
+    setEditParticipationValue(
+      registration.participation_type?.id != null
+        ? String(registration.participation_type.id)
+        : ""
+    );
+  };
+
+  const handleCancelInlineEdit = () => {
+    setEditingRegId(null);
+    setEditParticipationValue("");
+  };
+
+  const handleSaveInlineParticipationType = async (registrationId: string) => {
+    setLoadingEditId(registrationId);
+    try {
+      await api.put(`/registrations/${registrationId}`, {
+        participation_type_id: editParticipationValue || undefined,
+      });
+      toast.success("Tipe kepesertaan berhasil diperbarui");
+      setEditingRegId(null);
+      setEditParticipationValue("");
+      mutate();
+    } catch (err: any) {
+      toast.error(err?.message || "Gagal memperbarui tipe kepesertaan");
+    } finally {
+      setLoadingEditId(null);
+    }
+  };
+
   return {
     // State
     keyword,
@@ -442,6 +485,10 @@ export function useRegistrationActions(eventGroupId: string) {
     emailTargetIds,
     emailType,
     setEmailType,
+    editingRegId,
+    editParticipationValue,
+    setEditParticipationValue,
+    loadingEditId,
 
     // Data
     data,
@@ -477,5 +524,8 @@ export function useRegistrationActions(eventGroupId: string) {
     handleBulkSendEmail,
     handleSingleSendEmail,
     handleConfirmSendEmail,
+    handleStartInlineEdit,
+    handleCancelInlineEdit,
+    handleSaveInlineParticipationType,
   };
 }

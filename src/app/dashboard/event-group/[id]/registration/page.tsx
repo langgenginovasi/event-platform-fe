@@ -9,6 +9,7 @@ import {
   Trash2,
   Mail,
   ChevronDown,
+  Pencil,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TableCard } from "@/components/shared/CustomCards";
@@ -33,8 +34,10 @@ import { BulkActionBar } from "@/components/features/workspace/Registration/Bulk
 import { AddParticipantModal } from "@/components/features/workspace/Registration/AddParticipantModal";
 import { CheckInEventModal } from "@/components/features/workspace/Registration/CheckInEventModal";
 import { DetailRegistrationModal } from "@/components/features/workspace/Registration/DetailRegistrationModal";
+import { InlineSaveCancelButtons } from "@/components/features/workspace/Registration/InlineSaveCancelButtons";
 import { SendEmailModal } from "@/components/features/workspace/Registration/SendEmailModal";
 import { TableBodyStates } from "@/components/shared/TableBodyStates";
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 
 export default function RegistrationPage() {
   const { id } = useParams() as { id: string };
@@ -162,13 +165,16 @@ export default function RegistrationPage() {
                   </div>
                 </TableHead>
                 <TableHead>
+                  <div className="flex items-center text-muted-foreground">Tipe Kepesertaan</div>
+                </TableHead>
+                <TableHead>
                   <div className="flex items-center text-muted-foreground">Kehadiran</div>
                 </TableHead>
                 <TableHead className="text-right">Opsi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              <TableBodyStates isLoading={reg.isLoading} isEmpty={!reg.data?.data || reg.data.data.length === 0} colSpan={6} emptyMessage="Tidak ada data peserta terdaftar" />
+              <TableBodyStates isLoading={reg.isLoading} isEmpty={!reg.data?.data || reg.data.data.length === 0} colSpan={7} emptyMessage="Tidak ada data peserta terdaftar" />
 
               {!reg.isLoading &&
                 reg.data?.data?.map((r) => {
@@ -181,7 +187,7 @@ export default function RegistrationPage() {
                   return (
                     <TableRow
                       key={r.id}
-                      className={cn(isSelected && "bg-blue-50/50 hover:bg-blue-50/70")}
+                      className={cn("group", isSelected && "bg-blue-50/50 hover:bg-blue-50/70")}
                     >
                       <TableCell className="text-center">
                         <Checkbox
@@ -206,6 +212,62 @@ export default function RegistrationPage() {
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {r.participant.company}
+                      </TableCell>
+                      <TableCell>
+                        {reg.editingRegId === r.id ? (
+                          <div className="flex items-center gap-1">
+                            <Select
+                              value={reg.editParticipationValue}
+                              onValueChange={(val) =>
+                                reg.setEditParticipationValue(
+                                  val === "__none__" ? "" : String(val)
+                                )
+                              }
+                            >
+                              <SelectTrigger className="h-8 w-[130px] text-xs">
+                                <span className="truncate">
+                                  {reg.editParticipationValue
+                                    ? reg.participationTypes.find(
+                                        (pt: any) => String(pt.id) === reg.editParticipationValue
+                                      )?.name || "-"
+                                    : "-- Tidak Ditentukan --"}
+                                </span>
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="__none__">-- Tidak Ditentukan --</SelectItem>
+                                {reg.participationTypes.map((pt: any) => (
+                                  <SelectItem key={pt.id} value={String(pt.id)}>
+                                    {pt.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <InlineSaveCancelButtons
+                              isLoading={reg.loadingEditId === r.id}
+                              onSave={() => reg.handleSaveInlineParticipationType(r.id)}
+                              onCancel={reg.handleCancelInlineEdit}
+                            />
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5">
+                            <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-sm text-foreground">
+                              {r.participation_type?.name || (
+                                <span className="text-muted-foreground italic">-</span>
+                              )}
+                            </span>
+                            {can("registrationManage") && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-6 w-6 p-0 shrink-0 text-slate-600"
+                                onClick={() => reg.handleStartInlineEdit(r)}
+                                title="Ubah tipe kepesertaan"
+                              >
+                                <Pencil className="w-3 h-3" />
+                              </Button>
+                            )}
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell>
                         {reg.totalEvents > 0 ? (
@@ -234,7 +296,7 @@ export default function RegistrationPage() {
                             }}
                           >
                             <Eye className="w-3.5 h-3.5 mr-1.5" />
-                            Detail
+                            Lihat
                           </Button>
                           <Button
                             variant="outline"
@@ -253,9 +315,9 @@ export default function RegistrationPage() {
                                 className="text-emerald-600 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
                                 onClick={() => reg.handleManualCheckIn(r.id)}
                                 disabled={checkinDone}
-                                title={checkinDone ? "Sudah check-in di semua event" : "Check In Manual"}
+                                title={checkinDone ? "Sudah masuk di semua event" : "Masuk Manual"}
                               >
-                                Check In
+                                Masuk
                               </Button>
                               <Button
                                 variant="outline"
@@ -263,9 +325,9 @@ export default function RegistrationPage() {
                                 className="text-amber-600 border-amber-200 hover:bg-amber-50 hover:text-amber-700"
                                 onClick={() => reg.handleManualCheckOut(r.id)}
                                 disabled={checkoutDone || noCheckinYet}
-                                title={checkoutDone ? "Sudah check-out di semua event" : noCheckinYet ? "Belum check-in" : "Check Out Manual"}
+                                title={checkoutDone ? "Sudah keluar di semua event" : noCheckinYet ? "Belum masuk" : "Keluar Manual"}
                               >
-                                Check Out
+                                Keluar
                               </Button>
                               <Button
                                 variant="outline"
