@@ -236,7 +236,7 @@ export default function DashboardLayout({
   const sortedNavItems = [...navItems].sort((a, b) => b.href.length - a.href.length);
   const activeItem = sortedNavItems.find((item) => pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href)));
   
-  let pageTitle = activeItem?.name ?? "Beranda";
+  const pageTitle = activeItem?.name ?? "Beranda";
   let subTitle = null;
 
   if (isWorkspaceMode) {
