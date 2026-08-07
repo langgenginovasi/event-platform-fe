@@ -31,28 +31,28 @@ export function TestEmailCard({
 }: TestEmailCardProps) {
   return (
     <ContentCard>
-      <ContentCardHeader icon={Mail} title="Test Email" />
+      <ContentCardHeader icon={Mail} title="Uji Email" />
       <ContentCardBody className="space-y-4">
         <p className="text-sm text-gray-600">
           Kirim email test untuk memastikan konfigurasi SMTP berfungsi.
         </p>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-700">Template</label>
+          <label className="text-sm font-medium text-gray-700">Templat</label>
           <Select
             items={[
-              { value: "test", label: "Template Test (SMTP Check)" },
-              { value: "ticket", label: "Template Tiket (dengan QR Code)" },
+              { value: "test", label: "Templat Uji (Cek SMTP)" },
+              { value: "ticket", label: "Templat Tiket (dengan QR Code)" },
             ]}
             value={testTemplate}
             onValueChange={(v) => onTemplateChange(v as "test" | "ticket")}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Pilih Template" />
+              <SelectValue placeholder="Pilih Templat" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="test">Template Test (SMTP Check)</SelectItem>
-              <SelectItem value="ticket">Template Tiket (dengan QR Code)</SelectItem>
+              <SelectItem value="test">Templat Uji (Cek SMTP)</SelectItem>
+              <SelectItem value="ticket">Templat Tiket (dengan QR Code)</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -94,7 +94,7 @@ export function TestEmailCard({
             ) : (
               <Mail className="w-4 h-4 mr-2" />
             )}
-            Kirim Test
+            Kirim Uji
           </Button>
         </div>
       </ContentCardBody>
