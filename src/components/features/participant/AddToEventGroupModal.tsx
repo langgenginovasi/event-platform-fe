@@ -36,14 +36,14 @@ export function AddToEventGroupModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Tambahkan ke Event Group</DialogTitle>
+          <DialogTitle>Tambahkan ke Grup Event</DialogTitle>
         </DialogHeader>
         <DialogBody className="space-y-4">
           <p className="text-sm text-gray-500">
-            Pilih Event Group untuk mendaftarkan {selectedCount} peserta yang dipilih.
+            Pilih Grup Event untuk mendaftarkan {selectedCount} peserta yang dipilih.
           </p>
           <div>
-            <label className="text-sm font-medium mb-1 block">Event Group</label>
+            <label className="text-sm font-medium mb-1 block">Grup Event</label>
             <Select
               items={eventGroups.map((eg: any) => ({ value: eg.id, label: eg.name }))}
               value={selectedEventGroupId}

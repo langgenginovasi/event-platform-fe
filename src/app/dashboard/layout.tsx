@@ -41,17 +41,17 @@ const superAdminExtras: NavItem[] = [
 ];
 
 const globalEventAdminNav: NavItem[] = [
-  { name: "Dashboard", href: "/dashboard", icon: Home },
+  { name: "Beranda", href: "/dashboard", icon: Home },
   { name: "Grup Event", href: "/dashboard/event-group", icon: LayoutDashboard },
   { name: "Peserta", href: "/dashboard/participant", icon: Users },
 ];
 
 const getWorkspaceNav = (id: string): NavItem[] => [
-  { name: "Overview", href: `/dashboard/event-group/${id}`, icon: LayoutDashboard },
+  { name: "Ringkasan", href: `/dashboard/event-group/${id}`, icon: LayoutDashboard },
   { name: "Event", href: `/dashboard/event-group/${id}/event`, icon: CalendarDays },
   { name: "Registrasi", href: `/dashboard/event-group/${id}/registration`, icon: ClipboardList },
-  { name: "Participation Types", href: `/dashboard/event-group/${id}/participation-types`, icon: Settings },
-  { name: "Scan QR", href: `/dashboard/event-group/${id}/scan`, icon: QrCode },
+  { name: "Tipe Partisipasi", href: `/dashboard/event-group/${id}/participation-types`, icon: Settings },
+  { name: "Pindai QR", href: `/dashboard/event-group/${id}/scan`, icon: QrCode },
   { name: "Laporan", href: `/dashboard/event-group/${id}/export`, icon: BarChart },
 ];
 
@@ -234,7 +234,7 @@ export default function DashboardLayout({
   const sortedNavItems = [...navItems].sort((a, b) => b.href.length - a.href.length);
   const activeItem = sortedNavItems.find((item) => pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href)));
   
-  let pageTitle = activeItem?.name ?? "Dashboard";
+  let pageTitle = activeItem?.name ?? "Beranda";
   let subTitle = null;
 
   if (isWorkspaceMode) {
@@ -259,7 +259,7 @@ export default function DashboardLayout({
           }}
         >
           {/* Accessible title for screen readers */}
-          <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
+          <SheetTitle className="sr-only">Menu Navigasi</SheetTitle>
           <SidebarContent
             navItems={navItems}
             pathname={pathname}

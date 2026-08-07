@@ -111,7 +111,7 @@ export default function SettingsPage() {
                 </h3>
                 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Alamat Email (Tidak dapat diubah)</label>
+                  <label className="text-sm font-medium text-gray-700">Email (Tidak dapat diubah)</label>
                   <Input
                     value={email}
                     disabled
@@ -187,14 +187,14 @@ export default function SettingsPage() {
                     onClick={() => router.push("/dashboard/settings/membership-types")}
                   >
                     <Users className="w-4 h-4 mr-2" />
-                    Membership Types
+                    Tipe Keanggotaan
                   </Button>
                   <Button
                     variant="outline"
                     onClick={() => router.push("/dashboard/settings/participation-types")}
                   >
                     <Tags className="w-4 h-4 mr-2" />
-                    Participation Types
+                    Tipe Partisipasi
                   </Button>
                 </div>
               </div>

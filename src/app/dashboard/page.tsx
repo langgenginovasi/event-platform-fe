@@ -27,7 +27,7 @@ export default function EventAdminDashboard() {
     { label: "Total Grup Event", value: String(actions.totalEventGroups), icon: Calendar, iconBg: "#dbeafe", iconClass: "text-blue-900" },
     { label: "Total Event", value: String(actions.totalEvents), icon: TrendingUp, iconBg: "#d1fae5", iconClass: "text-emerald-800" },
     { label: "Total Peserta", value: String(actions.totalParticipants), icon: Users, iconBg: "#fef3c7", iconClass: "text-amber-800" },
-    { label: "Check-in", value: String(actions.totalCheckIns), icon: ScanLine, iconBg: "#ede9fe", iconClass: "text-violet-800" },
+    { label: "Kehadiran", value: String(actions.totalCheckIns), icon: ScanLine, iconBg: "#ede9fe", iconClass: "text-violet-800" },
   ];
 
   return (

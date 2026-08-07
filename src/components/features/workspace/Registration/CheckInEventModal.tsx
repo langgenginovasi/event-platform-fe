@@ -52,7 +52,7 @@ export function CheckInEventModal({
     if (isCheckinAction) {
       if (status?.checkin) suffix = " (Selesai)";
     } else {
-      if (!status?.checkin) suffix = " (⚠ Belum Check In)";
+      if (!status?.checkin) suffix = " (⚠ Belum Masuk)";
       else if (status?.checkout) suffix = " (Selesai)";
     }
     return { value: ev.id, label: ev.name + suffix, disabled: isDisabled };
@@ -63,7 +63,7 @@ export function CheckInEventModal({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            {isCheckinAction ? "Check In" : "Check Out"} - Pilih Event
+            {isCheckinAction ? "Masuk" : "Keluar"} - Pilih Event
           </DialogTitle>
         </DialogHeader>
         <DialogBody className="space-y-4">

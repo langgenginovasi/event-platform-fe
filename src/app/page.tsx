@@ -112,7 +112,7 @@ export default function LoginPage() {
                 style={{ "--tw-border-opacity": "1" } as React.CSSProperties}
                 onFocus={(e) => (e.target.style.borderColor = "var(--brand-light)")}
                 onBlur={(e) => (e.target.style.borderColor = "#e5e7eb")}
-                placeholder="name@company.com"
+                placeholder="nama@perusahaan.com"
               />
             </div>
 
@@ -122,7 +122,7 @@ export default function LoginPage() {
                 htmlFor="password"
                 className="text-xs font-semibold uppercase tracking-wider text-gray-700"
               >
-                Password
+                Kata Sandi
               </label>
               <div className="relative">
                 <input

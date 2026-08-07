@@ -61,7 +61,7 @@ export default function EventGroupParticipationTypesPage() {
 
   const handleAssign = async () => {
     if (!selectedTypeId) {
-      toast.error("Pilih participation type");
+      toast.error("Pilih tipe partisipasi");
       return;
     }
 
@@ -70,7 +70,7 @@ export default function EventGroupParticipationTypesPage() {
       await api.post(`/event-groups/${eventGroupId}/participation-types`, {
         participation_type_id: selectedTypeId,
       });
-      toast.success("Participation type berhasil ditambahkan");
+      toast.success("Tipe partisipasi berhasil ditambahkan");
       setIsDialogOpen(false);
       setSelectedTypeId("");
       mutateAssignments();
@@ -109,7 +109,7 @@ export default function EventGroupParticipationTypesPage() {
     <div className="flex flex-col space-y-7 md:space-y-10 pb-20 md:pb-0">
       <TableCard>
         <TableToolbar
-          title="Participation Types"
+          title="Tipe Partisipasi"
           keyword=""
           setKeyword={() => {}}
           searchPlaceholder=""
@@ -141,7 +141,7 @@ export default function EventGroupParticipationTypesPage() {
                 isLoading={assignmentsLoading}
                 isEmpty={assignments.length === 0}
                 colSpan={5}
-                emptyMessage="Belum ada participation type yang ditugaskan"
+                emptyMessage="Belum ada tipe partisipasi yang ditugaskan"
               />
 
               {!assignmentsLoading &&
@@ -196,14 +196,14 @@ export default function EventGroupParticipationTypesPage() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Tambah Participation Type</DialogTitle>
+            <DialogTitle>Tambah Tipe Partisipasi</DialogTitle>
           </DialogHeader>
           <DialogBody className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Pilih Type</label>
+              <label className="text-sm font-medium text-foreground">Pilih Tipe</label>
               <Select value={selectedTypeId} onValueChange={(v) => setSelectedTypeId(v as string)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Pilih participation type" />
+                  <SelectValue placeholder="Pilih tipe partisipasi" />
                 </SelectTrigger>
                 <SelectContent>
                   {availableTypes.map((type) => (

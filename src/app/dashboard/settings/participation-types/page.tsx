@@ -8,13 +8,13 @@ export default function ParticipationTypesPage() {
   const crud = useTypeCrud({
     endpoint: "/participation-types",
     swrKey: GET_PARTICIPATION_TYPES(),
-    entityName: "Participation Type",
+    entityName: "Tipe Partisipasi",
   });
 
   return (
     <TypeCrudTable
-      title="Participation Types"
-      entityName="Participation Type"
+      title="Tipe Partisipasi"
+      entityName="Tipe Partisipasi"
       items={crud.items}
       isLoading={crud.isLoading}
       columns={[

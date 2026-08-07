@@ -10,7 +10,7 @@ import {
   DialogBody,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { cn, formatDate, formatDateTime } from "@/lib/utils";
+import { cn, formatDate, formatDateLong, formatTime, formatGender } from "@/lib/utils";
 
 interface DetailRegistrationModalProps {
   open: boolean;
@@ -65,9 +65,7 @@ export function DetailRegistrationModal({
                 <div>
                   <p className="text-sm text-muted-foreground">Jenis Kelamin</p>
                   <p className="font-medium text-foreground">
-                    {detail.participant?.gender === "L"
-                      ? "Laki-laki"
-                      : "Perempuan"}
+                    {formatGender(detail.participant?.gender)}
                   </p>
                 </div>
               </div>
@@ -87,7 +85,7 @@ export function DetailRegistrationModal({
                 </div>
                 <div className="flex-1 space-y-3">
                   <div>
-                    <p className="text-sm text-muted-foreground">Status</p>
+                    <p className="text-sm text-muted-foreground">Status Pendaftaran</p>
                     <span
                       className={cn(
                         "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold",
@@ -100,9 +98,15 @@ export function DetailRegistrationModal({
                     </span>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Event Group</p>
+                    <p className="text-sm text-muted-foreground">Grup Event</p>
                     <p className="font-medium text-foreground">
                       {detail.event_group?.name}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Tipe Kepesertaan</p>
+                    <p className="font-medium text-foreground">
+                      {detail.participation_type?.name || "-"}
                     </p>
                   </div>
                   <div>
@@ -155,7 +159,7 @@ export function DetailRegistrationModal({
                               className="w-full flex items-center justify-between p-3 text-left hover:bg-slate-50 transition-colors"
                             >
                               <span className="font-medium text-sm text-foreground">
-                                {log.event?.name || "Unknown Event"}
+                                {log.event?.name || "Event Tidak Diketahui"}
                               </span>
                               <ChevronDown className={cn(
                                 "h-4 w-4 text-muted-foreground shrink-0 ml-2 transition-transform duration-200",
@@ -165,20 +169,26 @@ export function DetailRegistrationModal({
                             {isExpanded && (
                               <div className="border-t px-3 pb-3 pt-2 flex gap-8 text-sm">
                                 <div>
-                                  <span className="text-xs text-muted-foreground block mb-1">Check In</span>
-                                  <span className="font-mono text-sm">
-                                    {log.checkins.length > 0
-                                      ? formatDateTime(log.checkins[0].scanned_at)
-                                      : "-"}
-                                  </span>
+                                  <span className="text-xs text-muted-foreground block mb-1">Waktu Masuk</span>
+                                  {log.checkins.length > 0 ? (
+                                    <div className="font-mono text-sm">
+                                      <span className="block">{formatDateLong(log.checkins[0].scanned_at)}</span>
+                                      <span className="block">{formatTime(log.checkins[0].scanned_at)}</span>
+                                    </div>
+                                  ) : (
+                                    <span className="font-mono text-sm">-</span>
+                                  )}
                                 </div>
                                 <div>
-                                  <span className="text-xs text-muted-foreground block mb-1">Check Out</span>
-                                  <span className="font-mono text-sm">
-                                    {log.checkouts.length > 0
-                                      ? formatDateTime(log.checkouts[0].scanned_at)
-                                      : "-"}
-                                  </span>
+                                  <span className="text-xs text-muted-foreground block mb-1">Waktu Keluar</span>
+                                  {log.checkouts.length > 0 ? (
+                                    <div className="font-mono text-sm">
+                                      <span className="block">{formatDateLong(log.checkouts[0].scanned_at)}</span>
+                                      <span className="block">{formatTime(log.checkouts[0].scanned_at)}</span>
+                                    </div>
+                                  ) : (
+                                    <span className="font-mono text-sm">-</span>
+                                  )}
                                 </div>
                               </div>
                             )}

@@ -8,13 +8,13 @@ export default function MembershipTypesPage() {
   const crud = useTypeCrud({
     endpoint: "/membership-types",
     swrKey: GET_MEMBERSHIP_TYPES(),
-    entityName: "Membership Type",
+    entityName: "Tipe Keanggotaan",
   });
 
   return (
     <TypeCrudTable
-      title="Membership Types"
-      entityName="Membership Type"
+      title="Tipe Keanggotaan"
+      entityName="Tipe Keanggotaan"
       items={crud.items}
       isLoading={crud.isLoading}
       columns={[

@@ -30,7 +30,7 @@ export function DashboardSidebar({
             color: "#fff",
           }}
         >
-          Download CSV
+          Unduh CSV
         </Button>
       </AccentCard>
 
@@ -44,14 +44,14 @@ export function DashboardSidebar({
         <div className="space-y-3">
           {[
             {
-              label: "Check-In",
+              label: "Masuk",
               value: String(totalCheckIns),
               pct: totalParticipants > 0
                 ? Math.min(Math.round((totalCheckIns / totalParticipants) * 100), 100)
                 : 0,
             },
             {
-              label: "Check-Out",
+              label: "Keluar",
               value: String(totalCheckOuts),
               pct: totalParticipants > 0
                 ? Math.min(Math.round((totalCheckOuts / totalParticipants) * 100), 100)

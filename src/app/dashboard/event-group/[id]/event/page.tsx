@@ -178,8 +178,8 @@ export default function EventPage() {
                 <TableHead>
                   <div className="flex items-center cursor-pointer group">Waktu Selesai <ArrowUpDown className="ml-2 h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" /></div>
                 </TableHead>
-                <TableHead className="text-center">Check-in</TableHead>
-                <TableHead className="text-center">Check-out</TableHead>
+                <TableHead className="text-center">Masuk</TableHead>
+                <TableHead className="text-center">Keluar</TableHead>
                 <TableHead className="text-right">Opsi</TableHead>
               </TableRow>
             </TableHeader>
@@ -214,7 +214,7 @@ export default function EventPage() {
                         {can("eventEdit") && (
                           <Button variant="outline" size="sm" onClick={() => handleOpenModal(event)}>
                             <Edit3 className="w-3.5 h-3.5 mr-1.5" />
-                            Edit
+                            Ubah
                           </Button>
                         )}
                         {can("eventDelete") && (

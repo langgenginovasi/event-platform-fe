@@ -132,7 +132,7 @@ export default function UsersPage() {
                 <TableRow>
                   <TableHead>Nama Lengkap</TableHead>
                   <TableHead>Email</TableHead>
-                  <TableHead>Role</TableHead>
+                  <TableHead>Peran</TableHead>
                   <TableHead className="text-right">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
@@ -207,23 +207,23 @@ export default function UsersPage() {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Role</label>
+              <label className="text-sm font-medium">Peran</label>
               <Select
                 items={[
-                  { value: "OPERATOR", label: "OPERATOR" },
-                  { value: "EVENT_ADMIN", label: "EVENT_ADMIN" },
-                  { value: "SUPER_ADMIN", label: "SUPER_ADMIN" },
+                  { value: "OPERATOR", label: "Operator" },
+                  { value: "EVENT_ADMIN", label: "Admin Event" },
+                  { value: "SUPER_ADMIN", label: "Super Admin" },
                 ]}
                 value={newUser.role}
                 onValueChange={(v) => setNewUser({ ...newUser, role: v as string })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Pilih Role" />
+                  <SelectValue placeholder="Pilih Peran" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="OPERATOR">OPERATOR</SelectItem>
-                  <SelectItem value="EVENT_ADMIN">EVENT_ADMIN</SelectItem>
-                  <SelectItem value="SUPER_ADMIN">SUPER_ADMIN</SelectItem>
+                  <SelectItem value="OPERATOR">Operator</SelectItem>
+                  <SelectItem value="EVENT_ADMIN">Admin Event</SelectItem>
+                  <SelectItem value="SUPER_ADMIN">Super Admin</SelectItem>
                 </SelectContent>
               </Select>
             </div>

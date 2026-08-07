@@ -78,7 +78,7 @@ export function EventGroupTable({ items, isLoading, onDelete }: EventGroupTableP
                     className="h-8 border-gray-200"
                     onClick={() => router.push(`/dashboard/event-group/${event.id}`)}
                   >
-                    <Eye className="w-3.5 h-3.5 mr-1.5" /> Workspace
+                    <Eye className="w-3.5 h-3.5 mr-1.5" /> Buka
                   </Button>
                   <Button
                     variant="outline"

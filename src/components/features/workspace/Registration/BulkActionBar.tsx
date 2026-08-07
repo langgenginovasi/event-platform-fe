@@ -41,7 +41,7 @@ export function BulkActionBar({
           className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 border-emerald-200"
           onClick={onCheckIn}
         >
-          Check In
+          Masuk
         </Button>
         <Button
           size="sm"
@@ -49,7 +49,7 @@ export function BulkActionBar({
           className="text-amber-600 hover:text-amber-700 hover:bg-amber-50 border-amber-200"
           onClick={onCheckOut}
         >
-          Check Out
+          Keluar
         </Button>
         <Button
           size="sm"

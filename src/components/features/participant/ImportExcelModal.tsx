@@ -13,6 +13,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { ExcelPreviewData } from "@/hooks/useParticipantActions";
+import { formatGender } from "@/lib/utils";
 
 interface ImportExcelModalProps {
   open: boolean;
@@ -113,7 +114,7 @@ export function ImportExcelModal({
                         <TableCell className="font-medium text-foreground">
                           {row.name || <span className="text-destructive italic">Kosong</span>}
                         </TableCell>
-                        <TableCell>{row.gender === "L" ? "Laki-laki" : "Perempuan"}</TableCell>
+                        <TableCell>{formatGender(row.gender)}</TableCell>
                         <TableCell>{row.company || <span className="text-muted-foreground italic">-</span>}</TableCell>
                         <TableCell>{row.email || <span className="text-destructive italic">Kosong</span>}</TableCell>
                       </TableRow>

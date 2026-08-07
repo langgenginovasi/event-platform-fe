@@ -52,7 +52,7 @@ export function CreateParticipantModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Tambah Participant</DialogTitle>
+          <DialogTitle>Tambah Peserta</DialogTitle>
         </DialogHeader>
         <DialogBody className="space-y-4">
           {errors.api && (
@@ -100,7 +100,7 @@ export function CreateParticipantModal({
               }}
             >
               <SelectTrigger className={errors.gender ? "border-red-500" : ""}>
-                <SelectValue placeholder="Pilih Gender" />
+                <SelectValue placeholder="Pilih Jenis Kelamin" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="L">Laki-laki</SelectItem>
@@ -123,18 +123,32 @@ export function CreateParticipantModal({
             {errors.company && <p className="text-red-500 text-xs mt-1">{errors.company}</p>}
           </div>
           <div>
-            <label className="text-sm font-medium mb-1 block">Membership Type (Opsional)</label>
+            <label className="text-sm font-medium mb-1 block">Tipe Keanggotaan (Opsional)</label>
             <Select
-              value={form.membership_type_id}
-              onValueChange={(v) => onFormChange({ ...form, membership_type_id: v as string })}
+              items={[
+                { value: "__none__", label: "-- Tidak Ditentukan --" },
+                ...membershipTypes.map((mt: any) => ({
+                  value: String(mt.id),
+                  label: mt.name,
+                })),
+              ]}
+              value={form.membership_type_id || "__none__"}
+              onValueChange={(v) =>
+                onFormChange({
+                  ...form,
+                  membership_type_id: (v as string) === "__none__" ? "" : (v as string),
+                })
+              }
             >
               <SelectTrigger>
-                <SelectValue placeholder="Pilih Membership Type" />
+                <SelectValue placeholder="Pilih Tipe Keanggotaan" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">-- Tidak Ditentukan --</SelectItem>
+                <SelectItem value="__none__">-- Tidak Ditentukan --</SelectItem>
                 {membershipTypes.map((mt: any) => (
-                  <SelectItem key={mt.id} value={mt.id}>{mt.name}</SelectItem>
+                  <SelectItem key={mt.id} value={String(mt.id)}>
+                    {mt.name}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>

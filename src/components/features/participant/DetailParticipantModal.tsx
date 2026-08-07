@@ -10,7 +10,7 @@ import {
   DialogBody,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { cn, formatDate, formatTime } from "@/lib/utils";
+import { cn, formatDate, formatDateLong, formatTime, formatGender } from "@/lib/utils";
 
 interface DetailParticipantModalProps {
   open: boolean;
@@ -58,11 +58,11 @@ export function DetailParticipantModal({
                 <div>
                   <p className="text-sm text-muted-foreground">Jenis Kelamin</p>
                   <p className="font-medium text-foreground">
-                    {detail.participant?.gender === "L" ? "Laki-laki" : "Perempuan"}
+                    {formatGender(detail.participant?.gender)}
                   </p>
                 </div>
                 <div className="col-span-2">
-                  <p className="text-sm text-muted-foreground">Membership Type</p>
+                  <p className="text-sm text-muted-foreground">Tipe Keanggotaan</p>
                   <p className="font-medium text-foreground">
                     {detail.participant?.membership_type?.name || "-"}
                   </p>
@@ -95,12 +95,19 @@ export function DetailParticipantModal({
                                   {reg.status}
                                 </span>
                               </div>
-                              <p className="text-xs text-muted-foreground mt-0.5">
-                                {eventCount} event ·{" "}
-                                {reg.event_group?.start_date ? formatDate(reg.event_group.start_date) : "-"}{" "}
-                                s/d{" "}
-                                {reg.event_group?.end_date ? formatDate(reg.event_group.end_date) : "-"}
-                              </p>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                {reg.participation_type && (
+                                  <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-violet-50 text-violet-700 border border-violet-200">
+                                    {reg.participation_type.name}
+                                  </span>
+                                )}
+                                <p className="text-xs text-muted-foreground">
+                                  {eventCount} event ·{" "}
+                                  {reg.event_group?.start_date ? formatDate(reg.event_group.start_date) : "-"}{" "}
+                                  s/d{" "}
+                                  {reg.event_group?.end_date ? formatDate(reg.event_group.end_date) : "-"}
+                                </p>
+                              </div>
                             </div>
                             <ChevronDown className={cn(
                               "h-5 w-5 text-muted-foreground shrink-0 ml-2 transition-transform duration-200",
@@ -118,12 +125,26 @@ export function DetailParticipantModal({
                                     </div>
                                     <div className="flex gap-6">
                                       <div>
-                                        <span className="text-xs text-muted-foreground block mb-1">Check In</span>
-                                        <span className="font-mono">{eventAtt.checkin_at ? formatTime(eventAtt.checkin_at) : "-"}</span>
+                                        <span className="text-xs text-muted-foreground block mb-1">Waktu Masuk</span>
+                                        {eventAtt.checkin_at ? (
+                                          <div className="font-mono text-sm">
+                                            <span className="block">{formatDateLong(eventAtt.checkin_at)}</span>
+                                            <span className="block">{formatTime(eventAtt.checkin_at)}</span>
+                                          </div>
+                                        ) : (
+                                          <span className="font-mono">-</span>
+                                        )}
                                       </div>
                                       <div>
-                                        <span className="text-xs text-muted-foreground block mb-1">Check Out</span>
-                                        <span className="font-mono">{eventAtt.checkout_at ? formatTime(eventAtt.checkout_at) : "-"}</span>
+                                        <span className="text-xs text-muted-foreground block mb-1">Waktu Keluar</span>
+                                        {eventAtt.checkout_at ? (
+                                          <div className="font-mono text-sm">
+                                            <span className="block">{formatDateLong(eventAtt.checkout_at)}</span>
+                                            <span className="block">{formatTime(eventAtt.checkout_at)}</span>
+                                          </div>
+                                        ) : (
+                                          <span className="font-mono">-</span>
+                                        )}
                                       </div>
                                     </div>
                                   </div>

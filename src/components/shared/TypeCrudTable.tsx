@@ -106,7 +106,7 @@ export function TypeCrudTable({
                       <div className="flex items-center justify-end gap-2">
                         <Button variant="outline" size="sm" onClick={() => onOpenDialog(item)}>
                           <Pencil className="w-3.5 h-3.5 mr-1.5" />
-                          Edit
+                          Ubah
                         </Button>
                         <Button
                           variant="outline"
