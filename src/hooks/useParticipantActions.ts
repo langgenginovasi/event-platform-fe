@@ -12,6 +12,7 @@ import {
   GET_EVENT_GROUPS,
   GET_PARTICIPANT_HISTORY,
   GET_MEMBERSHIP_TYPES,
+  UPDATE_PARTICIPANT,
 } from "@/lib/api-endpoints";
 
 export interface Participant {
@@ -66,6 +67,25 @@ export function useParticipantActions() {
   // ── Membership Types ───────────────────────────────────────────────
   const { data: membershipTypesRes } = useSWR<{ data: any[] }>(GET_MEMBERSHIP_TYPES());
   const membershipTypes = membershipTypesRes?.data || [];
+
+  // ── Edit Modal State ──────────────────────────────────────────────
+  const [openEditModal, setOpenEditModal] = useState(false);
+  const [editingParticipantId, setEditingParticipantId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({
+    name: "",
+    email: "",
+    gender: "",
+    company: "",
+    membership_type_id: "",
+  });
+  const [loadingEdit, setLoadingEdit] = useState(false);
+  const [editErrors, setEditErrors] = useState({
+    name: "",
+    email: "",
+    gender: "",
+    company: "",
+    api: "",
+  });
 
   // ── Import Excel State ─────────────────────────────────────────────
   const [openImportModal, setOpenImportModal] = useState(false);
@@ -169,6 +189,47 @@ export function useParticipantActions() {
     }
   };
 
+  const handleOpenEditModal = (participant: Participant) => {
+    setEditingParticipantId(participant.id);
+    setEditForm({
+      name: participant.name,
+      email: participant.email,
+      gender: participant.gender,
+      company: participant.company,
+      membership_type_id: participant.membership_type?.id || "",
+    });
+    setEditErrors({ name: "", email: "", gender: "", company: "", api: "" });
+    setOpenEditModal(true);
+  };
+
+  const handleUpdateParticipant = async () => {
+    if (!editingParticipantId) return;
+
+    const newErrors = { name: "", email: "", gender: "", company: "", api: "" };
+    if (!editForm.name.trim()) newErrors.name = "Nama wajib diisi";
+    if (!editForm.email.trim()) newErrors.email = "Email wajib diisi";
+    if (!editForm.gender) newErrors.gender = "Jenis kelamin wajib dipilih";
+    if (!editForm.company.trim()) newErrors.company = "Perusahaan wajib diisi";
+
+    setEditErrors(newErrors);
+    if (newErrors.name || newErrors.email || newErrors.gender || newErrors.company) return;
+
+    try {
+      setLoadingEdit(true);
+      await api.put(UPDATE_PARTICIPANT(editingParticipantId), editForm);
+
+      await refreshList();
+      setOpenEditModal(false);
+      setEditingParticipantId(null);
+      toast.success("Data peserta berhasil diperbarui");
+    } catch (error: any) {
+      const message = extractApiError(error, "Terjadi kesalahan");
+      setEditErrors((prev) => ({ ...prev, api: message }));
+    } finally {
+      setLoadingEdit(false);
+    }
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -258,6 +319,14 @@ export function useParticipantActions() {
     loadingCreate,
     errors,
     setErrors,
+    openEditModal,
+    setOpenEditModal,
+    editingParticipantId,
+    editForm,
+    setEditForm,
+    loadingEdit,
+    editErrors,
+    setEditErrors,
     openImportModal,
     setOpenImportModal,
     excelData,
@@ -292,6 +361,8 @@ export function useParticipantActions() {
     handleSelectOne,
     handleAddToEventGroup,
     handleCreateParticipant,
+    handleOpenEditModal,
+    handleUpdateParticipant,
     handleFileChange,
     handleSaveImportedData,
     handleCloseImportModal,

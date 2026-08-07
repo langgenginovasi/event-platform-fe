@@ -1,19 +1,20 @@
 "use client";
 
-import { Search, Plus, Import, Eye } from "lucide-react";
+import { Search, Plus, Import, Eye, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TableCard } from "@/components/shared/CustomCards";
 import { StatCard } from "@/components/shared/StatCard";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
+import { cn, formatGender } from "@/lib/utils";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PaginationFooter } from "@/components/shared/PaginationFooter";
 
 import { useParticipantActions } from "@/hooks/useParticipantActions";
 import { ParticipantBulkActionBar } from "@/components/features/participant/ParticipantBulkActionBar";
 import { CreateParticipantModal } from "@/components/features/participant/CreateParticipantModal";
+import { EditParticipantModal } from "@/components/features/participant/EditParticipantModal";
 import { ImportExcelModal } from "@/components/features/participant/ImportExcelModal";
 import { AddToEventGroupModal } from "@/components/features/participant/AddToEventGroupModal";
 import { DetailParticipantModal } from "@/components/features/participant/DetailParticipantModal";
@@ -77,7 +78,7 @@ export default function ParticipantPage() {
             className="text-lg font-bold"
             style={{ color: "var(--brand-primary)" }}
           >
-            Daftar Participant
+            Daftar Peserta
           </h2>
 
           <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
@@ -132,7 +133,7 @@ export default function ParticipantPage() {
                 <TableHead>Jenis Kelamin</TableHead>
                 <TableHead>Perusahaan</TableHead>
                 <TableHead>Email</TableHead>
-                <TableHead>Membership</TableHead>
+                <TableHead>Keanggotaan</TableHead>
                 <TableHead className="text-right">Opsi</TableHead>
               </TableRow>
             </TableHeader>
@@ -156,7 +157,7 @@ export default function ParticipantPage() {
                       {p.name}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {p.gender === "L" ? "Laki-laki" : "Perempuan"}
+                      {formatGender(p.gender)}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {p.company}
@@ -168,16 +169,27 @@ export default function ParticipantPage() {
                       {p.membership_type?.name || "-"}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          actions.setSelectedParticipantId(p.id);
-                          actions.setIsDetailModalOpen(true);
-                        }}
-                      >
-                        <Eye className="w-3.5 h-3.5 mr-1.5" /> Detail
-                      </Button>
+                      <div className="flex items-center justify-end space-x-2">
+                        {can("participantEdit") && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => actions.handleOpenEditModal(p)}
+                          >
+                            <Pencil className="w-3.5 h-3.5 mr-1.5" /> Ubah
+                          </Button>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            actions.setSelectedParticipantId(p.id);
+                            actions.setIsDetailModalOpen(true);
+                          }}
+                        >
+                          <Eye className="w-3.5 h-3.5 mr-1.5" /> Lihat
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
@@ -221,6 +233,18 @@ export default function ParticipantPage() {
         membershipTypes={actions.membershipTypes}
         isLoading={actions.loadingCreate}
         onSubmit={actions.handleCreateParticipant}
+      />
+
+      <EditParticipantModal
+        open={actions.openEditModal}
+        onOpenChange={actions.setOpenEditModal}
+        form={actions.editForm}
+        onFormChange={actions.setEditForm}
+        errors={actions.editErrors}
+        onErrorsChange={actions.setEditErrors}
+        membershipTypes={actions.membershipTypes}
+        isLoading={actions.loadingEdit}
+        onSubmit={actions.handleUpdateParticipant}
       />
 
       <AddToEventGroupModal

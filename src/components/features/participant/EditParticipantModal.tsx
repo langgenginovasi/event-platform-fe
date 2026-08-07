@@ -1,0 +1,175 @@
+"use client";
+
+import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogBody,
+  DialogFooter,
+} from "@/components/ui/dialog";
+
+interface EditParticipantModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  form: {
+    name: string;
+    email: string;
+    gender: string;
+    company: string;
+    membership_type_id: string;
+  };
+  onFormChange: (form: any) => void;
+  errors: {
+    name: string;
+    email: string;
+    gender: string;
+    company: string;
+    api: string;
+  };
+  onErrorsChange: (errors: any) => void;
+  membershipTypes: any[];
+  isLoading: boolean;
+  onSubmit: () => void;
+}
+
+export function EditParticipantModal({
+  open,
+  onOpenChange,
+  form,
+  onFormChange,
+  errors,
+  onErrorsChange,
+  membershipTypes,
+  isLoading,
+  onSubmit,
+}: EditParticipantModalProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Ubah Data Peserta</DialogTitle>
+        </DialogHeader>
+        <DialogBody className="space-y-4">
+          {errors.api && (
+            <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+              {errors.api}
+            </div>
+          )}
+          <div>
+            <label className="text-sm font-medium mb-1 block">Nama</label>
+            <Input
+              type="text"
+              value={form.name}
+              onChange={(e) => {
+                onFormChange({ ...form, name: e.target.value });
+                onErrorsChange({ ...errors, name: "" });
+              }}
+              className={errors.name ? "border-red-500" : ""}
+            />
+            {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
+          </div>
+          <div>
+            <label className="text-sm font-medium mb-1 block">Email</label>
+            <Input
+              type="email"
+              value={form.email}
+              onChange={(e) => {
+                onFormChange({ ...form, email: e.target.value });
+                onErrorsChange({ ...errors, email: "" });
+              }}
+              className={errors.email ? "border-red-500" : ""}
+            />
+            {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
+          </div>
+          <div>
+            <label className="text-sm font-medium mb-1 block">Jenis Kelamin</label>
+            <Select
+              items={[
+                { value: "L", label: "Laki-laki" },
+                { value: "P", label: "Perempuan" },
+              ]}
+              value={form.gender}
+              onValueChange={(v) => {
+                onFormChange({ ...form, gender: v as string });
+                onErrorsChange({ ...errors, gender: "" });
+              }}
+            >
+              <SelectTrigger className={errors.gender ? "border-red-500" : ""}>
+                <SelectValue placeholder="Pilih Jenis Kelamin" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="L">Laki-laki</SelectItem>
+                <SelectItem value="P">Perempuan</SelectItem>
+              </SelectContent>
+            </Select>
+            {errors.gender && <p className="text-red-500 text-xs mt-1">{errors.gender}</p>}
+          </div>
+          <div>
+            <label className="text-sm font-medium mb-1 block">Perusahaan</label>
+            <Input
+              type="text"
+              value={form.company}
+              onChange={(e) => {
+                onFormChange({ ...form, company: e.target.value });
+                onErrorsChange({ ...errors, company: "" });
+              }}
+              className={errors.company ? "border-red-500" : ""}
+            />
+            {errors.company && <p className="text-red-500 text-xs mt-1">{errors.company}</p>}
+          </div>
+          <div>
+            <label className="text-sm font-medium mb-1 block">Tipe Keanggotaan (Opsional)</label>
+            <Select
+              items={[
+                { value: "__none__", label: "-- Tidak Ditentukan --" },
+                ...membershipTypes.map((mt: any) => ({
+                  value: String(mt.id),
+                  label: mt.name,
+                })),
+              ]}
+              value={form.membership_type_id || "__none__"}
+              onValueChange={(v) =>
+                onFormChange({
+                  ...form,
+                  membership_type_id: (v as string) === "__none__" ? "" : (v as string),
+                })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Pilih Tipe Keanggotaan" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">-- Tidak Ditentukan --</SelectItem>
+                {membershipTypes.map((mt: any) => (
+                  <SelectItem key={mt.id} value={String(mt.id)}>
+                    {mt.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </DialogBody>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Batal
+          </Button>
+          <Button onClick={onSubmit} disabled={isLoading}>
+            {isLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                Menyimpan...
+              </>
+            ) : (
+              "Simpan Perubahan"
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
