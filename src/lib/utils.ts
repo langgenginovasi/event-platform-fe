@@ -33,6 +33,18 @@ export function formatTime(date: Date | string): string {
 }
 
 /**
+ * Format tanggal panjang: "27 Juli 2026"
+ */
+export function formatDateLong(date: Date | string): string {
+  const d = typeof date === "string" ? new Date(date) : date
+  return d.toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  })
+}
+
+/**
  * Format tanggal + waktu: "27 Jul 2026, 09:00 WIB"
  */
 export function formatDateTime(date: Date | string): string {
@@ -85,6 +97,15 @@ export function generateSlug(value: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")
+}
+
+// ─── Display Formatting Utilities ───────────────────────────────────────────
+
+/**
+ * Format jenis kelamin: "L" => "Laki-laki", "P" => "Perempuan".
+ */
+export function formatGender(gender?: string | null): string {
+  return gender === "P" ? "Perempuan" : "Laki-laki"
 }
 
 // ─── Error Utilities ────────────────────────────────────────────────────────

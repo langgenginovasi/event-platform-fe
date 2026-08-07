@@ -51,15 +51,19 @@ export const POST_REGISTRATION = () => `/registrations`;
 export const MUTATE_REGISTRATION_DETAIL = (id: string | number) =>
   `/registrations/${id}`;
 
+export const UPDATE_REGISTRATION = (id: string) => `/registrations/${id}`;
+
 export const GET_REGISTRATION_DETAIL_BY_PARTICIPANT = (participantId: string) =>
   `/registrations?participant_id=${participantId}`;
 
 // ─── Attendances ────────────────────────────────────────────────────────────
-export const GET_ATTENDANCES = (eventId?: string, eventGroupId?: string, registrationId?: string) => {
+export const GET_ATTENDANCES = (eventId?: string, eventGroupId?: string, registrationId?: string, page = 1, limit = 10) => {
   const params = new URLSearchParams();
   if (eventId) params.append("event_id", eventId);
   if (eventGroupId) params.append("event_group_id", eventGroupId);
   if (registrationId) params.append("registration_id", registrationId);
+  if (page) params.append("page", page.toString());
+  if (limit) params.append("limit", limit.toString());
   return `/attendances?${params.toString()}`;
 };
 
@@ -89,6 +93,7 @@ export const GET_PARTICIPANTS = (page = 1, limit = 10, search = "", not_in_event
 };
 export const GET_PARTICIPANT_DETAIL = (id: string) => `/participants/${id}`;
 export const GET_PARTICIPANT_HISTORY = (id: string) => `/participants/${id}/history`;
+export const UPDATE_PARTICIPANT = (id: string) => `/participants/${id}`;
 
 // ─── Membership Types ────────────────────────────────────────────────────────
 export const GET_MEMBERSHIP_TYPES = () => `/membership-types`;
