@@ -1,14 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import useSWR from "swr";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { extractApiError } from "@/lib/utils";
+import { pollEmailJobs } from "@/lib/emailJobPolling";
 import { GET_EVENT_GROUP_DETAIL } from "@/lib/api-endpoints";
 
 export function useWorkspaceOverviewActions(eventGroupId: string) {
-  const { data: eventGroupRes, isLoading } = useSWR(GET_EVENT_GROUP_DETAIL(eventGroupId));
+  const { data: eventGroupRes, isLoading, mutate } = useSWR(GET_EVENT_GROUP_DETAIL(eventGroupId));
   const eventGroup = eventGroupRes?.data;
 
   const totalSubEvents = eventGroup?.events?.length ?? 0;
@@ -27,19 +28,45 @@ export function useWorkspaceOverviewActions(eventGroupId: string) {
     })) || [];
 
   // ── Email State ─────────────────────────────────────────────────
-  const [emailSubject, setEmailSubject] = useState("Tiket Acara Anda");
+  const [emailSubject, setEmailSubject] = useState("Tiket Anda untuk {{event_group_name}}");
   const [emailBody, setEmailBody] = useState(
-    "Terima kasih telah mendaftar. Berikut adalah tiket Anda untuk akses masuk ke acara.",
+    "Terima kasih telah mendaftar untuk event {{event_name}} dalam {{event_group_name}}. Berikut adalah detail event yang akan Anda ikuti:",
   );
+  const [isSavingEmail, setIsSavingEmail] = useState(false);
   const [testEmail, setTestEmail] = useState("");
   const [isSendingTest, setIsSendingTest] = useState(false);
   const [testTemplate, setTestTemplate] = useState<"test" | "ticket">("test");
   const [selectedEventId, setSelectedEventId] = useState("");
 
+  // Initialize email settings from event group data
+  useEffect(() => {
+    if (eventGroup) {
+      setEmailSubject(eventGroup.email_subject || "Tiket Anda untuk {{event_group_name}}");
+      setEmailBody(eventGroup.email_body || "Terima kasih telah mendaftar untuk event {{event_name}} dalam {{event_group_name}}. Berikut adalah detail event yang akan Anda ikuti:");
+    }
+  }, [eventGroup]);
+
   const selectedEventName = (() => {
     const ev = eventGroup?.events?.find((e: any) => e.id === selectedEventId);
     return ev?.name || eventGroup?.name || "Nama Event Group";
   })();
+
+  const handleSaveEmailSettings = async () => {
+    setIsSavingEmail(true);
+    try {
+      await api.put(`/event-groups/${eventGroupId}`, {
+        email_subject: emailSubject || null,
+        email_body: emailBody || null,
+      });
+      await mutate();
+      toast.success("Pengaturan email berhasil disimpan");
+    } catch (error: any) {
+      const message = extractApiError(error, "Gagal menyimpan pengaturan email");
+      toast.error(message);
+    } finally {
+      setIsSavingEmail(false);
+    }
+  };
 
   const handleTestEmail = async () => {
     if (!testEmail) {
@@ -49,7 +76,7 @@ export function useWorkspaceOverviewActions(eventGroupId: string) {
 
     setIsSendingTest(true);
     try {
-      await api.post("/test/email", {
+      const res = await api.post<{ data: { job_id: string } }>("/test/email", {
         to: testEmail,
         subject: testTemplate === "ticket" ? `Tiket Anda untuk ${selectedEventName}` : `[Test] ${emailSubject}`,
         template: testTemplate,
@@ -57,8 +84,22 @@ export function useWorkspaceOverviewActions(eventGroupId: string) {
         participant_name: "Peserta Demo",
         body: testTemplate === "ticket" ? emailBody : undefined,
       });
-      toast.success(`Email test (${testTemplate}) berhasil dikirim ke ${testEmail}`);
       setTestEmail("");
+
+      const jobId = res?.data?.job_id;
+      if (jobId) {
+        toast.info("Email test masuk antrean, memeriksa status pengiriman...");
+        const result = await pollEmailJobs([jobId]);
+        if (result.timedOut) {
+          toast.warning("Pengiriman masih berlangsung. Periksa status di menu Email Jobs.");
+        } else if (result.failed > 0) {
+          toast.error(
+            result.failures[0]?.error || "Email test gagal terkirim."
+          );
+        } else {
+          toast.success(`Email test (${testTemplate}) berhasil terkirim ke ${testEmail}`);
+        }
+      }
     } catch (error: any) {
       const message = extractApiError(error, "Gagal mengirim email test.");
       toast.error(message);
@@ -80,6 +121,8 @@ export function useWorkspaceOverviewActions(eventGroupId: string) {
     setEmailSubject,
     emailBody,
     setEmailBody,
+    isSavingEmail,
+    handleSaveEmailSettings,
     testEmail,
     setTestEmail,
     isSendingTest,

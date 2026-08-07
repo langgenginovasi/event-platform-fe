@@ -26,7 +26,10 @@ export function EmailPreviewCard({
           <div className="border-b border-gray-100 px-4 py-3">
             <p className="text-xs text-gray-400 mb-1">From: Event Platform &lt;no-reply@event.local&gt;</p>
             <p className="text-sm font-semibold text-gray-800 truncate">
-              {emailSubject || "Tiket Acara Anda"}
+              {(emailSubject || "Tiket Anda untuk {{event_group_name}}")
+                .replace(/\{\{event_name\}\}/g, selectedEventName)
+                .replace(/\{\{event_group_name\}\}/g, selectedEventName)
+              }
             </p>
           </div>
 
@@ -48,13 +51,25 @@ export function EmailPreviewCard({
                 Halo <strong>[Nama Peserta]</strong>,
               </p>
               <p style={{ margin: "0 0 20px", fontSize: 14, color: "#475569", lineHeight: "1.7" }}>
-                {emailBody.replace("{name}", "[Nama Peserta]")}
+                {emailBody
+                  .replace(/\{\{name\}\}/g, "[Nama Peserta]")
+                  .replace(/\{\{event_name\}\}/g, selectedEventName)
+                  .replace(/\{\{event_group_name\}\}/g, selectedEventName)
+                  .replace(/\n/g, "<br>")
+                  .split("<br>")
+                  .map((line: string, i: number) => (
+                    <span key={i}>
+                      {i > 0 && <br />}
+                      <span dangerouslySetInnerHTML={{ __html: line }} />
+                    </span>
+                  ))
+                }
               </p>
 
               {/* QR Code Box */}
               <div style={{ background: "#f8fafc", border: "1px dashed #cbd5e1", borderRadius: 8, padding: "20px 16px", textAlign: "center", marginBottom: 20 }}>
                 <p style={{ margin: "0 0 12px", fontSize: 12, color: "#64748b" }}>
-                  Tunjukkan QR ini saat check-in:
+                  Tunjukkan QR ini saat masuk:
                 </p>
                 <div style={{ display: "inline-block", padding: 8, background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 8 }}>
                   <img

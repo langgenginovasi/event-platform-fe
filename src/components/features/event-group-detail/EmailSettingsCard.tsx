@@ -1,6 +1,6 @@
 "use client";
 
-import { Settings, Check } from "lucide-react";
+import { Settings, Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,6 +11,8 @@ interface EmailSettingsCardProps {
   onSubjectChange: (v: string) => void;
   emailBody: string;
   onBodyChange: (v: string) => void;
+  onSave: () => void;
+  isSaving: boolean;
 }
 
 export function EmailSettingsCard({
@@ -18,6 +20,8 @@ export function EmailSettingsCard({
   onSubjectChange,
   emailBody,
   onBodyChange,
+  onSave,
+  isSaving,
 }: EmailSettingsCardProps) {
   return (
     <ContentCard className="flex flex-col">
@@ -41,13 +45,19 @@ export function EmailSettingsCard({
             className="resize-none"
           />
           <p className="text-xs text-gray-500">
-            Gunakan <code className="bg-gray-100 px-1 py-0.5 rounded">{`{name}`}</code> untuk menyapa nama peserta.
+            Gunakan <code className="bg-gray-100 px-1 py-0.5 rounded">{`{{name}}`}</code> untuk nama peserta, 
+            <code className="bg-gray-100 px-1 py-0.5 rounded ml-1">{`{{event_name}}`}</code> untuk nama event, 
+            <code className="bg-gray-100 px-1 py-0.5 rounded ml-1">{`{{event_group_name}}`}</code> untuk nama event group.
           </p>
         </div>
         <div className="pt-2">
-          <Button className="w-full">
-            <Check className="w-4 h-4 mr-2" />
-            Simpan Pengaturan Email
+          <Button className="w-full" onClick={onSave} disabled={isSaving}>
+            {isSaving ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Check className="w-4 h-4 mr-2" />
+            )}
+            {isSaving ? "Menyimpan..." : "Simpan Pengaturan Email"}
           </Button>
         </div>
       </ContentCardBody>

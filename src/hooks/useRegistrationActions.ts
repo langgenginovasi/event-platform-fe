@@ -5,6 +5,7 @@ import useSWR from "swr";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { extractApiError } from "@/lib/utils";
+import { pollEmailJobs } from "@/lib/emailJobPolling";
 import { useBulkSelection } from "./useBulkSelection";
 import {
   GET_REGISTRATIONS,
@@ -73,6 +74,7 @@ export function useRegistrationActions(eventGroupId: string) {
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [emailTargetIds, setEmailTargetIds] = useState<string[]>([]);
   const [emailMode, setEmailMode] = useState<"single" | "bulk">("bulk");
+  const [emailType, setEmailType] = useState<"group" | "event">("group");
 
   // ── STATE UNTUK DELETE CONFIRMATION ──────────────────────────────
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -356,21 +358,40 @@ export function useRegistrationActions(eventGroupId: string) {
     setIsEmailModalOpen(true);
   };
 
-  const handleConfirmSendEmail = async () => {
-    if (!selectedEmailEventId) {
+  const handleConfirmSendEmail = async (type: "group" | "event" = "group", eventId?: string) => {
+    if (type === "event" && !eventId) {
       toast.error("Pilih event terlebih dahulu");
       return;
     }
 
     setIsSendingEmail(true);
     try {
-      await api.post("/registrations/bulk-send-email", {
+      const res = await api.post<{ data: { queued: number; job_ids: string[] } }>("/registrations/bulk-send-email", {
         registration_ids: emailTargetIds,
+        type,
+        event_id: eventId,
       });
-      toast.success(`Email berhasil dikirim ke ${emailTargetIds.length} peserta`);
+      const jobIds = res?.data?.job_ids ?? [];
       setEmailTargetIds([]);
       setIsEmailModalOpen(false);
       setSelectedEmailEventId("");
+      setEmailType("group");
+
+      if (jobIds.length > 0) {
+        toast.info(`${jobIds.length} email masuk antrean, pengiriman berlangsung di latar belakang...`);
+        const result = await pollEmailJobs(jobIds);
+        if (result.timedOut) {
+          toast.warning(
+            `Pengiriman masih berlangsung (${result.sent} terkirim, ${result.failed} gagal). Periksa status di menu Email Jobs.`
+          );
+        } else if (result.failed > 0) {
+          toast.error(
+            `${result.sent} email terkirim, ${result.failed} gagal. ${result.failures[0]?.error || ""}`.trim()
+          );
+        } else {
+          toast.success(`${result.sent} email berhasil terkirim`);
+        }
+      }
     } catch (err: any) {
       toast.error(extractApiError(err, "Gagal mengirim email"));
     } finally {
@@ -419,6 +440,8 @@ export function useRegistrationActions(eventGroupId: string) {
     setSelectedEmailEventId,
     isSendingEmail,
     emailTargetIds,
+    emailType,
+    setEmailType,
 
     // Data
     data,

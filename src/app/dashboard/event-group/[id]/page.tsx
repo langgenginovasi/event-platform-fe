@@ -48,6 +48,8 @@ export default function WorkspaceOverviewPage() {
           onSubjectChange={actions.setEmailSubject}
           emailBody={actions.emailBody}
           onBodyChange={actions.setEmailBody}
+          onSave={actions.handleSaveEmailSettings}
+          isSaving={actions.isSavingEmail}
         />
 
         <TestEmailCard
