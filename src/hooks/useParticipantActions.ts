@@ -33,6 +33,34 @@ export interface ExcelPreviewData {
   email: string;
   gender: string;
   company: string;
+  identification_type?: string;
+  identification_number?: string;
+  membership_type_name?: string;
+}
+
+function pickCell(row: any, ...names: string[]): string {
+  const key = Object.keys(row).find((k) =>
+    names.some((n) => k.toLowerCase().startsWith(n.toLowerCase()))
+  );
+  const value = key ? row[key] : undefined;
+  if (typeof value === "number") return String(value);
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function normalizeGender(value: string): string {
+  const v = value.toLowerCase();
+  if (["l", "laki-laki", "pria", "male", "m"].includes(v)) return "L";
+  if (["p", "perempuan", "wanita", "female", "f"].includes(v)) return "P";
+  return "P";
+}
+
+function normalizeIdentificationType(value: string): string | undefined {
+  const v = value.toLowerCase();
+  if (v.includes("ktp")) return "KTP";
+  if (v.includes("kta")) return "KTA";
+  if (v.includes("passport") || v.includes("paspor")) return "PASSPORT";
+  if (v.includes("lain") || v.includes("other")) return "OTHER";
+  return undefined;
 }
 
 export function useParticipantActions() {
@@ -86,6 +114,11 @@ export function useParticipantActions() {
     company: "",
     api: "",
   });
+
+  // ── Inline Edit Keanggotaan State ────────────────────────────────
+  const [editingParticipantIdInline, setEditingParticipantIdInline] = useState<string | null>(null);
+  const [editMembershipValue, setEditMembershipValue] = useState<string>("");
+  const [loadingEditMembershipId, setLoadingEditMembershipId] = useState<string | null>(null);
 
   // ── Import Excel State ─────────────────────────────────────────────
   const [openImportModal, setOpenImportModal] = useState(false);
@@ -230,6 +263,36 @@ export function useParticipantActions() {
     }
   };
 
+  // ── Inline Edit Keanggotaan Handlers ─────────────────────────────
+  const handleStartInlineEdit = (participant: Participant) => {
+    setEditingParticipantIdInline(participant.id);
+    setEditMembershipValue(
+      participant.membership_type?.id != null ? String(participant.membership_type.id) : ""
+    );
+  };
+
+  const handleCancelInlineEdit = () => {
+    setEditingParticipantIdInline(null);
+    setEditMembershipValue("");
+  };
+
+  const handleSaveInlineMembershipType = async (participantId: string) => {
+    setLoadingEditMembershipId(participantId);
+    try {
+      await api.put(UPDATE_PARTICIPANT(participantId), {
+        membership_type_id: editMembershipValue || undefined,
+      });
+      toast.success("Tipe keanggotaan berhasil diperbarui");
+      setEditingParticipantIdInline(null);
+      setEditMembershipValue("");
+      await refreshList();
+    } catch (error: any) {
+      toast.error(extractApiError(error, "Gagal memperbarui tipe keanggotaan"));
+    } finally {
+      setLoadingEditMembershipId(null);
+    }
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -244,15 +307,38 @@ export function useParticipantActions() {
         const ws = wb.Sheets[wsname];
         const rawData = XLSX.utils.sheet_to_json(ws) as any[];
 
-        const formatted = rawData.map((row) => ({
-          name: row["Nama"] || row["name"] || "",
-          email: row["Email"] || row["email"] || "",
-          gender:
-            row["Jenis Kelamin"] === "Laki-laki" || row["gender"] === "L" || row["Jenis Kelamin"] === "L"
-              ? "L"
-              : "P",
-          company: row["Perusahaan"] || row["company"] || "",
-        }));
+        const formatted = rawData.map((row) => {
+          const name = pickCell(row, "Nama", "name");
+          const email = pickCell(row, "Email", "email");
+          const gender = pickCell(row, "Jenis Kelamin", "gender");
+          const company = pickCell(row, "Perusahaan", "company");
+          const identificationNumber = pickCell(
+            row,
+            "No. Identitas",
+            "Nomor Identitas",
+            "No Identitas",
+            "identification_number"
+          );
+          const identificationType = normalizeIdentificationType(
+            pickCell(row, "Tipe Identitas", "Jenis Identitas", "identification_type")
+          );
+          const membershipTypeName = pickCell(
+            row,
+            "Tipe Keanggotaan",
+            "Keanggotaan",
+            "membership"
+          );
+
+          return {
+            name,
+            email,
+            gender: gender ? normalizeGender(gender) : "",
+            company,
+            identification_type: identificationType,
+            identification_number: identificationNumber || undefined,
+            membership_type_name: membershipTypeName || undefined,
+          };
+        });
 
         if (formatted.length === 0) {
           toast.warning("File Excel terbaca namun tidak ada data di dalamnya.");
@@ -280,8 +366,27 @@ export function useParticipantActions() {
     try {
       for (const item of excelData) {
         if (!item.name || !item.email) continue;
+        const payload: any = {
+          name: item.name,
+          email: item.email,
+          gender: item.gender || "P",
+          company: item.company,
+        };
+        if (item.identification_type) {
+          payload.identification_type = item.identification_type;
+        }
+        if (item.identification_number) {
+          payload.identification_number = item.identification_number;
+        }
+        if (item.membership_type_name) {
+          const match = membershipTypes.find(
+            (mt: any) =>
+              mt.name.toLowerCase() === item.membership_type_name!.toLowerCase()
+          );
+          if (match) payload.membership_type_id = match.id;
+        }
         try {
-          await api.post("/participants", item);
+          await api.post("/participants", payload);
           successCount++;
         } catch {
           // Skip failed items silently
@@ -333,6 +438,7 @@ export function useParticipantActions() {
     setExcelData,
     loadingImport,
     fileName,
+    setFileName,
     fileInputRef,
     openEventGroupModal,
     setOpenEventGroupModal,
@@ -366,5 +472,15 @@ export function useParticipantActions() {
     handleFileChange,
     handleSaveImportedData,
     handleCloseImportModal,
+
+    // Inline edit keanggotaan
+    editingParticipantIdInline,
+    setEditingParticipantIdInline,
+    editMembershipValue,
+    setEditMembershipValue,
+    loadingEditMembershipId,
+    handleStartInlineEdit,
+    handleCancelInlineEdit,
+    handleSaveInlineMembershipType,
   };
 }

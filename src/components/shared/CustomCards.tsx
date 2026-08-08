@@ -70,9 +70,9 @@ export function ContentCardHeader({
 }: {
   className?: string;
   icon?: React.ComponentType<{ className?: string }>;
-  title: string;
+  title: React.ReactNode;
   children?: React.ReactNode;
-} & React.ComponentProps<"div">) {
+} & Omit<React.ComponentProps<"div">, "title">) {
   return (
     <div
       className={cn(

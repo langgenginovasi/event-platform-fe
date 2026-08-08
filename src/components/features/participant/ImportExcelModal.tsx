@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef } from "react";
-import { Import, Trash2, Loader2, FileSpreadsheet } from "lucide-react";
+import { Import, Trash2, Loader2, FileSpreadsheet, Download } from "lucide-react";
+import * as XLSX from "xlsx";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
@@ -42,6 +42,32 @@ export function ImportExcelModal({
   onImport,
   onClose,
 }: ImportExcelModalProps) {
+  const handleDownloadTemplate = () => {
+    const headers = [
+      "Nama (Wajib)",
+      "Email (Wajib)",
+      "Jenis Kelamin (Wajib)",
+      "Perusahaan (Wajib)",
+      "Tipe Identitas (Opsional)",
+      "No. Identitas (Opsional)",
+      "Tipe Keanggotaan (Opsional)",
+    ];
+    const example = [
+      "Nama Peserta",
+      "peserta@example.com",
+      "L",
+      "PT Contoh",
+      "KTP",
+      "3201012345670001",
+      "Anggota",
+    ];
+    const ws = XLSX.utils.aoa_to_sheet([headers, example]);
+    ws["!cols"] = headers.map((h) => ({ wch: Math.max(h.length + 4, 18) }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Template Peserta");
+    XLSX.writeFile(wb, "Template_Import_Peserta.xlsx");
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -52,12 +78,22 @@ export function ImportExcelModal({
               Import Data Peserta via Excel
             </DialogTitle>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Format kolom wajib: Nama, Email, Jenis Kelamin (L/P), Perusahaan
+              Kolom wajib: Nama, Email, Jenis Kelamin (L/P), Perusahaan
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Kolom opsional: Tipe Identitas, No. Identitas, Tipe Keanggotaan
             </p>
           </div>
         </DialogHeader>
 
         <DialogBody className="space-y-6">
+          <div className="flex gap-3">
+            <Button variant="outline" size="sm" onClick={handleDownloadTemplate} className="shrink-0">
+              <Download className="w-4 h-4 mr-2" />
+              Download Template
+            </Button>
+          </div>
+
           <div className="border-2 border-dashed border-border rounded-xl p-6 text-center hover:bg-slate-50 transition-colors cursor-pointer relative group">
             <input
               type="file"
@@ -105,6 +141,9 @@ export function ImportExcelModal({
                       <TableHead>Jenis Kelamin</TableHead>
                       <TableHead>Perusahaan</TableHead>
                       <TableHead>Email</TableHead>
+                      <TableHead>Tipe Identitas</TableHead>
+                      <TableHead>No. Identitas</TableHead>
+                      <TableHead>Keanggotaan</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -117,6 +156,9 @@ export function ImportExcelModal({
                         <TableCell>{formatGender(row.gender)}</TableCell>
                         <TableCell>{row.company || <span className="text-muted-foreground italic">-</span>}</TableCell>
                         <TableCell>{row.email || <span className="text-destructive italic">Kosong</span>}</TableCell>
+                        <TableCell>{row.identification_type || <span className="text-muted-foreground italic">-</span>}</TableCell>
+                        <TableCell>{row.identification_number || <span className="text-muted-foreground italic">-</span>}</TableCell>
+                        <TableCell>{row.membership_type_name || <span className="text-muted-foreground italic">-</span>}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

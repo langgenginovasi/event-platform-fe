@@ -4,6 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+import { usePermissions } from "@/hooks/usePermissions";
 import { useWorkspaceOverviewActions } from "@/hooks/useWorkspaceOverviewActions";
 import { WorkspaceSummaryCards } from "@/components/features/event-group-detail/WorkspaceSummaryCards";
 import { WorkspaceQuickActions } from "@/components/features/event-group-detail/WorkspaceQuickActions";
@@ -17,6 +18,8 @@ export default function WorkspaceOverviewPage() {
   const router = useRouter();
   const eventGroupId = params.id as string;
   const actions = useWorkspaceOverviewActions(eventGroupId);
+  const { can } = usePermissions();
+
 
   return (
     <div className="flex flex-col space-y-7 md:space-y-10 pb-20 md:pb-0">
@@ -42,34 +45,38 @@ export default function WorkspaceOverviewPage() {
 
       <WorkspaceChart chartData={actions.chartData} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <EmailSettingsCard
-          emailSubject={actions.emailSubject}
-          onSubjectChange={actions.setEmailSubject}
-          emailBody={actions.emailBody}
-          onBodyChange={actions.setEmailBody}
-          onSave={actions.handleSaveEmailSettings}
-          isSaving={actions.isSavingEmail}
-        />
+      {can("emailManage") && (
+        <>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <EmailSettingsCard
+              emailSubject={actions.emailSubject}
+              onSubjectChange={actions.setEmailSubject}
+              emailBody={actions.emailBody}
+              onBodyChange={actions.setEmailBody}
+              onSave={actions.handleSaveEmailSettings}
+              isSaving={actions.isSavingEmail}
+            />
 
-        <TestEmailCard
-          eventGroup={actions.eventGroup}
-          testTemplate={actions.testTemplate}
-          onTemplateChange={actions.setTestTemplate}
-          selectedEventId={actions.selectedEventId}
-          onEventChange={actions.setSelectedEventId}
-          testEmail={actions.testEmail}
-          onEmailChange={actions.setTestEmail}
-          isSending={actions.isSendingTest}
-          onSend={actions.handleTestEmail}
-        />
+            <TestEmailCard
+              eventGroup={actions.eventGroup}
+              testTemplate={actions.testTemplate}
+              onTemplateChange={actions.setTestTemplate}
+              selectedEventId={actions.selectedEventId}
+              onEventChange={actions.setSelectedEventId}
+              testEmail={actions.testEmail}
+              onEmailChange={actions.setTestEmail}
+              isSending={actions.isSendingTest}
+              onSend={actions.handleTestEmail}
+            />
 
-        <EmailPreviewCard
-          emailSubject={actions.emailSubject}
-          emailBody={actions.emailBody}
-          selectedEventName={actions.selectedEventName}
-        />
-      </div>
+            <EmailPreviewCard
+              emailSubject={actions.emailSubject}
+              emailBody={actions.emailBody}
+              selectedEventName={actions.selectedEventName}
+            />
+          </div>
+        </>
+      )}
     </div>
   );
 }

@@ -93,7 +93,7 @@ export function EventGroupTable({ items, isLoading, onDelete }: EventGroupTableP
                   >
                     <Mail className="w-3.5 h-3.5 mr-1.5" /> Email
                   </Button>
-                  {can("eventGroupDelete") && (
+                  {can("eventGroupManage") && (
                     <Button
                       variant="outline"
                       size="sm"

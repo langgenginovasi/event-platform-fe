@@ -42,6 +42,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/u
 export default function RegistrationPage() {
   const { id } = useParams() as { id: string };
   const { can } = usePermissions();
+  const canBulk = can("registrationManage");
 
   const reg = useRegistrationActions(id);
 
@@ -95,29 +96,31 @@ export default function RegistrationPage() {
         />
 
         <BulkActionBar
-          selectedCount={reg.selectedIds.length}
-          onSendEmail={reg.handleBulkSendEmail}
-          onCheckIn={reg.handleBulkCheckIn}
-          onCheckOut={reg.handleBulkCheckOut}
-          onDelete={reg.handleBulkDelete}
+          selectedCount={canBulk ? reg.selectedIds.length : 0}
+          onSendEmail={canBulk ? reg.handleBulkSendEmail : undefined}
+          onCheckIn={canBulk ? reg.handleBulkCheckIn : undefined}
+          onCheckOut={canBulk ? reg.handleBulkCheckOut : undefined}
+          onDelete={canBulk ? reg.handleBulkDelete : undefined}
         />
 
         <div className="overflow-x-auto">
           <Table>
             <TableHeader className="bg-slate-50">
               <TableRow>
-                <TableHead className="w-12 text-center">
-                  <Checkbox
-                    checked={
-                      !!(
-                        reg.data?.data &&
-                        reg.data.data.length > 0 &&
-                        reg.selectedIds.length === reg.data.data.length
-                      )
-                    }
-                    onCheckedChange={(checked) => reg.handleSelectAll(reg.data?.data ?? [], checked as boolean)}
-                  />
-                </TableHead>
+                {canBulk && (
+                  <TableHead className="w-12 text-center">
+                    <Checkbox
+                      checked={
+                        !!(
+                          reg.data?.data &&
+                          reg.data.data.length > 0 &&
+                          reg.selectedIds.length === reg.data.data.length
+                        )
+                      }
+                      onCheckedChange={(checked) => reg.handleSelectAll(reg.data?.data ?? [], checked as boolean)}
+                    />
+                  </TableHead>
+                )}
                 <TableHead
                   onClick={() => reg.handleSort("name")}
                   className="cursor-pointer group"
@@ -174,7 +177,7 @@ export default function RegistrationPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              <TableBodyStates isLoading={reg.isLoading} isEmpty={!reg.data?.data || reg.data.data.length === 0} colSpan={7} emptyMessage="Tidak ada data peserta terdaftar" />
+              <TableBodyStates isLoading={reg.isLoading} isEmpty={!reg.data?.data || reg.data.data.length === 0} colSpan={canBulk ? 7 : 6} emptyMessage="Tidak ada data peserta terdaftar" />
 
               {!reg.isLoading &&
                 reg.data?.data?.map((r) => {
@@ -189,14 +192,16 @@ export default function RegistrationPage() {
                       key={r.id}
                       className={cn("group", isSelected && "bg-blue-50/50 hover:bg-blue-50/70")}
                     >
-                      <TableCell className="text-center">
-                        <Checkbox
-                          checked={isSelected}
-                          onCheckedChange={(checked) =>
-                            reg.handleSelectOne(r.id, checked as boolean)
-                          }
-                        />
-                      </TableCell>
+                      {canBulk && (
+                        <TableCell className="text-center">
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={(checked) =>
+                              reg.handleSelectOne(r.id, checked as boolean)
+                            }
+                          />
+                        </TableCell>
+                      )}
                       <TableCell>
                         <div className="flex flex-col">
                           <span className="text-sm font-semibold text-foreground">
@@ -298,16 +303,18 @@ export default function RegistrationPage() {
                             <Eye className="w-3.5 h-3.5 mr-1.5" />
                             Lihat
                           </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-blue-600 border-blue-200 hover:bg-blue-50 hover:text-blue-700"
-                            onClick={() => reg.handleSingleSendEmail(r.id)}
-                            title="Kirim Email Tiket"
-                          >
-                            <Mail className="w-3.5 h-3.5" />
-                          </Button>
-                          {can("registrationManage") && (
+                          {canBulk && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-blue-600 border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+                              onClick={() => reg.handleSingleSendEmail(r.id)}
+                              title="Kirim Email Tiket"
+                            >
+                              <Mail className="w-3.5 h-3.5" />
+                            </Button>
+                          )}
+                          {can("attendanceManual") && (
                             <>
                               <Button
                                 variant="outline"
@@ -329,16 +336,18 @@ export default function RegistrationPage() {
                               >
                                 Keluar
                               </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="text-destructive border-destructive/20 hover:bg-destructive/10 hover:text-destructive"
-                                onClick={() => reg.handleDelete(r.id)}
-                                title="Hapus Registrasi"
-                              >
-                                <Trash2 className="w-3.5 h-3.5 mr-1.5" />
-                                Hapus
-                              </Button>
+                              {canBulk && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-destructive border-destructive/20 hover:bg-destructive/10 hover:text-destructive"
+                                  onClick={() => reg.handleDelete(r.id)}
+                                  title="Hapus Registrasi"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                                  Hapus
+                                </Button>
+                              )}
                             </>
                           )}
                         </div>

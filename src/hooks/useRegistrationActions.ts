@@ -389,19 +389,7 @@ export function useRegistrationActions(eventGroupId: string) {
       setEmailType("group");
 
       if (jobIds.length > 0) {
-        toast.info(`${jobIds.length} email masuk antrean, pengiriman berlangsung di latar belakang...`);
-        const result = await pollEmailJobs(jobIds);
-        if (result.timedOut) {
-          toast.warning(
-            `Pengiriman masih berlangsung (${result.sent} terkirim, ${result.failed} gagal). Periksa status di menu Email Jobs.`
-          );
-        } else if (result.failed > 0) {
-          toast.error(
-            `${result.sent} email terkirim, ${result.failed} gagal. ${result.failures[0]?.error || ""}`.trim()
-          );
-        } else {
-          toast.success(`${result.sent} email berhasil terkirim`);
-        }
+        toast.info(`${jobIds.length} email masuk antrean. Proses pengiriman berjalan di latar belakang (Anda bisa meninggalkan halaman ini).`);
       }
     } catch (err: any) {
       toast.error(extractApiError(err, "Gagal mengirim email"));

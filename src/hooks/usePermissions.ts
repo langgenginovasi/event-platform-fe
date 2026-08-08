@@ -3,64 +3,69 @@
 import { useSession } from "next-auth/react";
 
 export type PermissionAction =
-  | "participantCreate"
-  | "participantEdit"
-  | "participantDelete"
-  | "eventGroupCreate"
-  | "eventGroupEdit"
-  | "eventGroupDelete"
-  | "eventCreate"
-  | "eventEdit"
-  | "eventDelete"
-  | "registrationManage"
-  | "reportExport"
-  | "userManage"
-  | "settingsManage";
+  | "participantManage"       // Manajemen peserta (master data)
+  | "eventGroupManage"        // CRUD Grup Event
+  | "eventManage"             // CRUD Event & Sesi
+  | "registrationManage"      // Kelola Registrasi (lihat, daftarkan, hapus)
+  | "participationTypeManage" // Kelola Tipe Partisipasi
+  | "emailManage"             // Pengaturan email, kirim email broadcast
+  | "reportExport"            // Ekspor laporan / cetak QR
+  | "attendanceScan"          // Scan QR masuk/keluar
+  | "attendanceManual"        // Check-in/out manual (OPERATOR untuk antisipasi kendala lapangan)
+  | "userManage"              // Manajemen Pengguna (SUPER_ADMIN only)
+  | "settingsManage";         // Pengaturan Aplikasi (SUPER_ADMIN only)
+
+const SUPER_ADMIN_PERMISSIONS: PermissionAction[] = [
+  "participantManage",
+  "eventGroupManage",
+  "eventManage",
+  "registrationManage",
+  "participationTypeManage",
+  "emailManage",
+  "reportExport",
+  "attendanceScan",
+  "attendanceManual",
+  "userManage",
+  "settingsManage",
+];
+
+const EVENT_ADMIN_PERMISSIONS: PermissionAction[] = [
+  // EVENT_ADMIN bisa kelola event tapi tidak bisa manajemen peserta master,
+  // pengaturan aplikasi, atau manajemen pengguna
+  "eventGroupManage",
+  "eventManage",
+  "registrationManage",
+  "participationTypeManage",
+  "emailManage",
+  "reportExport",
+  "attendanceScan",
+  "attendanceManual",
+];
+
+const OPERATOR_PERMISSIONS: PermissionAction[] = [
+  // OPERATOR hanya bisa scan, laporan, dan check-in/out manual
+  "attendanceScan",
+  "attendanceManual",
+  "reportExport",
+];
 
 export function usePermissions() {
   const { data: session } = useSession();
-  const role = session?.user?.role || "GUEST";
+  const role = (session?.user?.role as string) || "GUEST";
+
+  const permissions: PermissionAction[] =
+    role === "SUPER_ADMIN"
+      ? SUPER_ADMIN_PERMISSIONS
+      : role === "EVENT_ADMIN"
+      ? EVENT_ADMIN_PERMISSIONS
+      : role === "OPERATOR"
+      ? OPERATOR_PERMISSIONS
+      : [];
 
   const can = (action: PermissionAction): boolean => {
-    switch (role) {
-      case "SUPER_ADMIN":
-        // Super admin can do everything
-        return true;
-        
-      case "EVENT_ADMIN":
-        // Event admin can do everything except manage users and settings
-        if (action === "userManage" || action === "settingsManage") {
-          return false;
-        }
-        return true;
-
-      case "OPERATOR":
-        // Operator can only scan, view, and manual check-in/out.
-        // All create/edit/delete actions are restricted.
-        const restrictedForOperator: PermissionAction[] = [
-          "participantCreate",
-          "participantEdit",
-          "participantDelete",
-          "eventGroupCreate",
-          "eventGroupEdit",
-          "eventGroupDelete",
-          "eventCreate",
-          "eventEdit",
-          "eventDelete",
-          "registrationManage",
-          "reportExport",
-          "userManage",
-          "settingsManage",
-        ];
-        if (restrictedForOperator.includes(action)) {
-          return false;
-        }
-        return true;
-
-      default:
-        return false;
-    }
+    return permissions.includes(action);
   };
 
-  return { can, role };
+  return { can, role, permissions };
 }
+

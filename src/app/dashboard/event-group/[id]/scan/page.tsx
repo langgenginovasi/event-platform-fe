@@ -504,11 +504,20 @@ function QRScanner({
 
     return () => {
       cancelled = true;
-      if (scanner && scanner.isScanning) {
-        scanner.stop().catch(() => {});
-      }
       if (scanner) {
-        scanner.clear();
+        try {
+          if (scanner.isScanning) {
+            scanner.stop().then(() => {
+              scanner?.clear();
+            }).catch(() => {
+              scanner?.clear();
+            });
+          } else {
+            scanner.clear();
+          }
+        } catch (e) {
+          console.error("Cleanup error", e);
+        }
       }
       scannerRef.current = null;
     };

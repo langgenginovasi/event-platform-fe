@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input";
 import { cn, formatGender } from "@/lib/utils";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PaginationFooter } from "@/components/shared/PaginationFooter";
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
+import { InlineSaveCancelButtons } from "@/components/features/workspace/Registration/InlineSaveCancelButtons";
 
 import { useParticipantActions } from "@/hooks/useParticipantActions";
 import { ParticipantBulkActionBar } from "@/components/features/participant/ParticipantBulkActionBar";
@@ -92,7 +94,7 @@ export default function ParticipantPage() {
               />
             </div>
 
-            {can("participantCreate") && (
+            {can("participantManage") && (
               <Button
                 onClick={() => actions.setOpenCreateModal(true)}
                 className="whitespace-nowrap w-full sm:w-auto"
@@ -166,11 +168,64 @@ export default function ParticipantPage() {
                       {p.email}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {p.membership_type?.name || "-"}
+                      {actions.editingParticipantIdInline === p.id ? (
+                        <div className="flex items-center gap-1">
+                          <Select
+                            value={actions.editMembershipValue}
+                            onValueChange={(val) =>
+                              actions.setEditMembershipValue(
+                                val === "__none__" ? "" : String(val)
+                              )
+                            }
+                          >
+                            <SelectTrigger className="h-8 w-[140px] text-xs">
+                              <span className="truncate">
+                                {actions.editMembershipValue
+                                  ? actions.membershipTypes.find(
+                                      (mt: any) => String(mt.id) === actions.editMembershipValue
+                                    )?.name || "-"
+                                  : "-- Tidak Ditentukan --"}
+                              </span>
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__none__">-- Tidak Ditentukan --</SelectItem>
+                              {actions.membershipTypes.map((mt: any) => (
+                                <SelectItem key={mt.id} value={String(mt.id)}>
+                                  {mt.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <InlineSaveCancelButtons
+                            isLoading={actions.loadingEditMembershipId === p.id}
+                            onSave={() => actions.handleSaveInlineMembershipType(p.id)}
+                            onCancel={actions.handleCancelInlineEdit}
+                          />
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5">
+                          <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-sm text-foreground">
+                            {p.membership_type?.name || (
+                              <span className="text-muted-foreground italic">-</span>
+                            )}
+                          </span>
+                          {can("participantManage") && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-6 w-6 p-0 shrink-0 text-slate-600"
+                              onClick={() => actions.handleStartInlineEdit(p)}
+                              title="Ubah tipe keanggotaan"
+                            >
+                              <Pencil className="w-3 h-3" />
+                            </Button>
+                          )}
+                        </div>
+                      )}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end space-x-2">
-                        {can("participantEdit") && (
+                        {can("participantManage") && (
                           <Button
                             variant="outline"
                             size="sm"
@@ -215,7 +270,7 @@ export default function ParticipantPage() {
         excelData={actions.excelData}
         onExcelDataChange={actions.setExcelData}
         fileName={actions.fileName}
-        onFileNameChange={(v) => {}}
+        onFileNameChange={actions.setFileName}
         fileInputRef={actions.fileInputRef}
         onFileChange={actions.handleFileChange}
         isLoading={actions.loadingImport}

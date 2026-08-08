@@ -22,6 +22,8 @@ interface CreateParticipantModalProps {
     gender: string;
     company: string;
     membership_type_id: string;
+    identification_type?: string;
+    identification_number?: string;
   };
   onFormChange: (form: any) => void;
   errors: {
@@ -152,6 +154,49 @@ export function CreateParticipantModal({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium mb-1 block">Tipe Identitas (Opsional)</label>
+              <Select
+                items={[
+                  { value: "__none__", label: "-- Pilih Tipe --" },
+                  { value: "KTP", label: "KTP" },
+                  { value: "KTA", label: "KTA" },
+                  { value: "PASSPORT", label: "Passport" },
+                  { value: "OTHER", label: "Lainnya" },
+                ]}
+                value={form.identification_type || "__none__"}
+                onValueChange={(v) =>
+                  onFormChange({
+                    ...form,
+                    identification_type: (v as string) === "__none__" ? "" : (v as string),
+                  })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih Tipe Identitas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">-- Pilih Tipe --</SelectItem>
+                  <SelectItem value="KTP">KTP</SelectItem>
+                  <SelectItem value="KTA">KTA</SelectItem>
+                  <SelectItem value="PASSPORT">Passport</SelectItem>
+                  <SelectItem value="OTHER">Lainnya</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">No. Identitas (Opsional)</label>
+              <Input
+                type="text"
+                value={form.identification_number || ""}
+                onChange={(e) => {
+                  onFormChange({ ...form, identification_number: e.target.value });
+                }}
+                placeholder="Masukkan Nomor Identitas"
+              />
+            </div>
           </div>
         </DialogBody>
         <DialogFooter>

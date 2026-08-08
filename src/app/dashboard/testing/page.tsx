@@ -142,8 +142,10 @@ export default function TestingPage() {
     // Check Master Data
     const start4 = Date.now();
     try {
-      const mtRes: any = await api.get("/membership-types");
-      const ptRes: any = await api.get("/participation-types");
+      const [mtRes, ptRes]: any = await Promise.all([
+        api.get("/membership-types"),
+        api.get("/participation-types"),
+      ]);
       checks[3] = {
         name: "Data Master",
         status: "success",
@@ -173,7 +175,7 @@ export default function TestingPage() {
 
     setIsSendingEmail(true);
     try {
-      await api.post("/email/test", {
+      await api.post("/test/email", {
         to: testEmail,
         subject: testEmailSubject,
         body: testEmailBody,

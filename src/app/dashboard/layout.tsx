@@ -16,6 +16,7 @@ import {
   ClipboardList,
   QrCode,
   BarChart,
+  Mail,
   ChevronLeft,
   Zap,
 } from "lucide-react";
@@ -42,10 +43,12 @@ const superAdminExtras: NavItem[] = [
   { name: "Pengujian", href: "/dashboard/testing", icon: Zap },
 ];
 
-const globalEventAdminNav: NavItem[] = [
+// Menu global untuk SUPER_ADMIN & EVENT_ADMIN (bedanya hanya EVENT_ADMIN tidak ada menu Peserta)
+const globalBaseNav: NavItem[] = [
   { name: "Beranda", href: "/dashboard", icon: Home },
   { name: "Grup Event", href: "/dashboard/event-group", icon: LayoutDashboard },
   { name: "Peserta", href: "/dashboard/participant", icon: Users },
+  { name: "Log Email", href: "/dashboard/email-log", icon: Mail },
 ];
 
 const getWorkspaceNav = (id: string): NavItem[] => [
@@ -54,6 +57,7 @@ const getWorkspaceNav = (id: string): NavItem[] => [
   { name: "Registrasi", href: `/dashboard/event-group/${id}/registration`, icon: ClipboardList },
   { name: "Tipe Partisipasi", href: `/dashboard/event-group/${id}/participation-types`, icon: Settings },
   { name: "Pindai QR", href: `/dashboard/event-group/${id}/scan`, icon: QrCode },
+  { name: "Log Email", href: `/dashboard/event-group/${id}/email-log`, icon: Mail },
   { name: "Laporan", href: `/dashboard/event-group/${id}/export`, icon: BarChart },
 ];
 
@@ -224,11 +228,26 @@ export default function DashboardLayout({
   
   if (isWorkspaceMode && workspaceId) {
     navItems = getWorkspaceNav(workspaceId);
+    if (role === "OPERATOR") {
+      // OPERATOR hanya bisa Scan, Laporan, Ringkasan, dan Registrasi (check-in/out manual)
+      navItems = navItems.filter(item =>
+        item.name === "Pindai QR" || item.name === "Laporan" || item.name === "Ringkasan" || item.name === "Registrasi"
+      );
+    } else if (role === "EVENT_ADMIN") {
+      // EVENT_ADMIN tidak bisa lihat Tipe Partisipasi (pengaturan sistem)
+      navItems = navItems.filter(item => item.name !== "Tipe Partisipasi");
+    }
   } else {
     // Global Mode
-    navItems = [...globalEventAdminNav];
-    if (role === "SUPER_ADMIN") {
-      navItems = [...navItems, ...superAdminExtras];
+    if (role === "OPERATOR") {
+      // OPERATOR hanya bisa melihat daftar Grup Event
+      navItems = [{ name: "Grup Event", href: "/dashboard/event-group", icon: LayoutDashboard }];
+    } else if (role === "EVENT_ADMIN") {
+      // EVENT_ADMIN tidak bisa manajemen Peserta (master data) dan tidak ada Pengguna/Pengaturan
+      navItems = globalBaseNav.filter(item => item.name !== "Peserta");
+    } else {
+      // SUPER_ADMIN: semua menu termasuk Peserta, Pengguna, Pengaturan
+      navItems = [...globalBaseNav, ...superAdminExtras];
     }
   }
 

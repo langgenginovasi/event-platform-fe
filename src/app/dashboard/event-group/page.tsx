@@ -63,7 +63,7 @@ export default function EventGroupPage() {
                 onChange={(e) => actions.setKeyword(e.target.value)}
               />
             </div>
-            {can("eventGroupCreate") && (
+            {can("eventGroupManage") && (
               <Button
                 onClick={() => actions.setOpenCreateModal(true)}
                 className="whitespace-nowrap w-full sm:w-auto text-white"

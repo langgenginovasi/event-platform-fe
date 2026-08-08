@@ -149,7 +149,7 @@ export default function EventPage() {
           setKeyword={setKeyword}
           searchPlaceholder="Cari event..."
           actionButton={
-            can("eventCreate") && (
+            can("eventManage") && (
               <Button
                 onClick={() => handleOpenModal()}
                 className="whitespace-nowrap w-full"
@@ -211,13 +211,13 @@ export default function EventPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end space-x-2">
-                        {can("eventEdit") && (
+                        {can("eventManage") && (
                           <Button variant="outline" size="sm" onClick={() => handleOpenModal(event)}>
                             <Edit3 className="w-3.5 h-3.5 mr-1.5" />
                             Ubah
                           </Button>
                         )}
-                        {can("eventDelete") && (
+                        {can("eventManage") && (
                           <Button
                             variant="outline"
                             size="sm"

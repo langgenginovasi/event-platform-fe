@@ -5,7 +5,6 @@ import useSWR from "swr";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { extractApiError } from "@/lib/utils";
-import { pollEmailJobs } from "@/lib/emailJobPolling";
 import { GET_EVENT_GROUP_DETAIL } from "@/lib/api-endpoints";
 
 export function useWorkspaceOverviewActions(eventGroupId: string) {
@@ -76,7 +75,7 @@ export function useWorkspaceOverviewActions(eventGroupId: string) {
 
     setIsSendingTest(true);
     try {
-      const res = await api.post<{ data: { job_id: string } }>("/test/email", {
+      await api.post("/test/email", {
         to: testEmail,
         subject: testTemplate === "ticket" ? `Tiket Anda untuk ${selectedEventName}` : `[Test] ${emailSubject}`,
         template: testTemplate,
@@ -84,22 +83,9 @@ export function useWorkspaceOverviewActions(eventGroupId: string) {
         participant_name: "Peserta Demo",
         body: testTemplate === "ticket" ? emailBody : undefined,
       });
+      // Email masuk antrean, worker akan mengirimnya di background
+      toast.success(`Email test berhasil dimasukkan ke antrean. Cek kotak masuk ${testEmail} dalam beberapa detik.`);
       setTestEmail("");
-
-      const jobId = res?.data?.job_id;
-      if (jobId) {
-        toast.info("Email test masuk antrean, memeriksa status pengiriman...");
-        const result = await pollEmailJobs([jobId]);
-        if (result.timedOut) {
-          toast.warning("Pengiriman masih berlangsung. Periksa status di menu Email Jobs.");
-        } else if (result.failed > 0) {
-          toast.error(
-            result.failures[0]?.error || "Email test gagal terkirim."
-          );
-        } else {
-          toast.success(`Email test (${testTemplate}) berhasil terkirim ke ${testEmail}`);
-        }
-      }
     } catch (error: any) {
       const message = extractApiError(error, "Gagal mengirim email test.");
       toast.error(message);
