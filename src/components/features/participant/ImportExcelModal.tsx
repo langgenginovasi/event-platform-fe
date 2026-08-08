@@ -75,7 +75,7 @@ export function ImportExcelModal({
           <div>
             <DialogTitle className="flex items-center gap-2">
               <FileSpreadsheet className="w-5 h-5 text-green-600" />
-              Import Data Peserta via Excel
+              Import Data Peserta via Excel / CSV
             </DialogTitle>
             <p className="text-xs text-muted-foreground mt-0.5">
               Kolom wajib: Nama, Email, Jenis Kelamin (L/P), Perusahaan
@@ -99,7 +99,7 @@ export function ImportExcelModal({
               type="file"
               ref={fileInputRef}
               onChange={onFileChange}
-              accept=".xlsx, .xls"
+              accept=".xlsx, .xls, .csv"
               className="absolute inset-0 opacity-0 cursor-pointer"
             />
             <div className="flex flex-col items-center justify-center gap-2">
@@ -108,7 +108,7 @@ export function ImportExcelModal({
                 {fileName ? `File terpilih: ${fileName}` : "Klik atau seret file Excel ke sini"}
               </p>
               <p className="text-xs text-muted-foreground">
-                Mendukung ekstensi .xlsx, .xls
+                Mendukung ekstensi .xlsx, .xls, .csv
               </p>
             </div>
           </div>

@@ -377,26 +377,87 @@ export function useRegistrationActions(eventGroupId: string) {
 
     setIsSendingEmail(true);
     try {
-      const res = await api.post<{ data: { queued: number; job_ids: string[] } }>("/registrations/bulk-send-email", {
+      const res = await api.post<{ data: { queued: number; batch_id: string | null } }>("/registrations/bulk-send-email", {
         registration_ids: emailTargetIds,
         type,
         event_id: eventId,
       });
-      const jobIds = res?.data?.job_ids ?? [];
+
+      const batchId = res?.data?.batch_id;
+      const queued = res?.data?.queued ?? 0;
+
       setEmailTargetIds([]);
       setIsEmailModalOpen(false);
       setSelectedEmailEventId("");
       setEmailType("group");
 
-      if (jobIds.length > 0) {
-        toast.info(`${jobIds.length} email masuk antrean. Proses pengiriman berjalan di latar belakang (Anda bisa meninggalkan halaman ini).`);
+      if (!batchId || queued === 0) {
+        toast.warning("Tidak ada email yang masuk ke antrean.");
+        return;
       }
+
+      // Toast awal: masuk antrean
+      const toastId = toast.loading(`⏳ ${queued} email masuk antrean, mengirim...`);
+
+      // Polling status batch di background
+      const POLL_INTERVAL = 2000;
+      const POLL_TIMEOUT = 120000; // 2 menit
+      const start = Date.now();
+
+      const pollBatch = async () => {
+        if (Date.now() - start > POLL_TIMEOUT) {
+          toast.dismiss(toastId);
+          toast.warning(`Waktu tunggu habis. Cek halaman Email Log untuk status pengiriman.`, { duration: 6000 });
+          return;
+        }
+
+        try {
+          const batchRes = await api.get<{ data: { status: string; stats: { sent: number; failed: number; queued: number; sending: number }; total_jobs: number } }>(
+            `/email-batches/${batchId}`
+          );
+          const batchData = batchRes?.data;
+
+          if (!batchData) {
+            setTimeout(pollBatch, POLL_INTERVAL);
+            return;
+          }
+
+          const { status, stats, total_jobs } = batchData;
+          const done = (stats.sent ?? 0) + (stats.failed ?? 0);
+          const total = total_jobs ?? queued;
+
+          // Update progress toast
+          if (status !== "completed") {
+            toast.loading(`⏳ Mengirim email... ${done}/${total}`, { id: toastId });
+            setTimeout(pollBatch, POLL_INTERVAL);
+          } else {
+            // Selesai
+            toast.dismiss(toastId);
+            if ((stats.failed ?? 0) === 0) {
+              toast.success(`✅ ${stats.sent} email berhasil dikirim!`, { duration: 6000 });
+            } else {
+              toast.warning(
+                `⚠️ ${stats.sent} berhasil, ${stats.failed} gagal. Cek Email Log untuk detail.`,
+                { duration: 8000 }
+              );
+            }
+          }
+        } catch {
+          // Error transien, coba lagi
+          setTimeout(pollBatch, POLL_INTERVAL);
+        }
+      };
+
+      // Mulai polling setelah 2 detik
+      setTimeout(pollBatch, 2000);
+
     } catch (err: any) {
       toast.error(extractApiError(err, "Gagal mengirim email"));
     } finally {
       setIsSendingEmail(false);
     }
   };
+
 
   // ── EDIT REGISTRATION HANDLERS ─────────────────────────────────
   const handleStartInlineEdit = (registration: RegistrationItem) => {

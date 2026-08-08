@@ -104,3 +104,12 @@ export const GET_PARTICIPATION_TYPES = () => `/participation-types`;
 // ─── Event Group Participation Types ─────────────────────────────────────────
 export const GET_EVENT_GROUP_PARTICIPATION_TYPES = (eventGroupId: string) => `/event-groups/${eventGroupId}/participation-types`;
 
+// ─── Email Batches ────────────────────────────────────────────────────────────
+export const GET_EMAIL_BATCHES = (eventGroupId?: string, page = 1, limit = 10) => {
+  const params = new URLSearchParams();
+  if (eventGroupId) params.append("event_group_id", eventGroupId);
+  if (page) params.append("page", page.toString());
+  if (limit) params.append("limit", limit.toString());
+  return `/email-batches?${params.toString()}`;
+};
+export const GET_EMAIL_BATCH_DETAIL = (id: string) => `/email-batches/${id}`;
