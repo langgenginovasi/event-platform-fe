@@ -349,7 +349,7 @@ export default function ParticipantPage() {
         cancelText="Batal"
         onConfirm={actions.handleConfirmDelete}
         isLoading={actions.isDeleting}
-        variant="destructive"
+        variant="danger"
       />
     </div>
   );
