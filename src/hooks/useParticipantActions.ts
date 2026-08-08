@@ -146,6 +146,12 @@ export function useParticipantActions() {
   const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<Record<number, boolean>>({});
 
+  // ── Delete State ───────────────────────────────────────────────────
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [deleteTargetIds, setDeleteTargetIds] = useState<string[]>([]);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const { data: detailRes, isLoading: isLoadingDetail } = useSWR<{ data: any }>(
     isDetailModalOpen && selectedParticipantId ? GET_PARTICIPANT_HISTORY(selectedParticipantId) : null
   );
@@ -410,6 +416,42 @@ export function useParticipantActions() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  const handleDelete = (participantId: string) => {
+    setDeleteTargetId(participantId);
+    setDeleteTargetIds([]);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleBulkDelete = () => {
+    setDeleteTargetId(null);
+    setDeleteTargetIds(selectedIds);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    setIsDeleting(true);
+    try {
+      if (deleteTargetId) {
+        await api.delete(`/participants/${deleteTargetId}`);
+        toast.success("Peserta berhasil dihapus");
+      } else if (deleteTargetIds.length > 0) {
+        await Promise.all(
+          deleteTargetIds.map((id) => api.delete(`/participants/${id}`))
+        );
+        toast.success(`${deleteTargetIds.length} peserta berhasil dihapus`);
+        setSelectedIds([]);
+      }
+      await refreshList();
+      setIsDeleteModalOpen(false);
+      setDeleteTargetId(null);
+      setDeleteTargetIds([]);
+    } catch (err: any) {
+      toast.error(extractApiError(err, "Gagal menghapus peserta"));
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return {
     // State
     keyword,
@@ -451,6 +493,11 @@ export function useParticipantActions() {
     setSelectedParticipantId,
     expandedGroups,
     setExpandedGroups,
+    isDeleteModalOpen,
+    setIsDeleteModalOpen,
+    deleteTargetId,
+    deleteTargetIds,
+    isDeleting,
 
     // Data
     participant,
@@ -472,6 +519,9 @@ export function useParticipantActions() {
     handleFileChange,
     handleSaveImportedData,
     handleCloseImportModal,
+    handleDelete,
+    handleBulkDelete,
+    handleConfirmDelete,
 
     // Inline edit keanggotaan
     editingParticipantIdInline,

@@ -21,6 +21,8 @@ import { ImportExcelModal } from "@/components/features/participant/ImportExcelM
 import { AddToEventGroupModal } from "@/components/features/participant/AddToEventGroupModal";
 import { DetailParticipantModal } from "@/components/features/participant/DetailParticipantModal";
 import { TableBodyStates } from "@/components/shared/TableBodyStates";
+import { ConfirmationDialog } from "@/components/shared/ConfirmationDialog";
+import { Trash2 } from "lucide-react";
 
 const fieldsParticipantManual = [
   {
@@ -118,6 +120,8 @@ export default function ParticipantPage() {
         <ParticipantBulkActionBar
           selectedCount={actions.selectedIds.length}
           onAddToGroup={() => actions.setOpenEventGroupModal(true)}
+          onDelete={actions.handleBulkDelete}
+          canDelete={can("participantManage")}
         />
 
         {/* Data Table */}
@@ -244,6 +248,16 @@ export default function ParticipantPage() {
                         >
                           <Eye className="w-3.5 h-3.5 mr-1.5" /> Lihat
                         </Button>
+                        {can("participantManage") && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                            onClick={() => actions.handleDelete(p.id)}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -320,6 +334,22 @@ export default function ParticipantPage() {
         detail={actions.participantDetail}
         expandedGroups={actions.expandedGroups}
         onToggleExpand={(idx) => actions.setExpandedGroups(prev => ({ ...prev, [idx]: !prev[idx] }))}
+      />
+
+      <ConfirmationDialog
+        open={actions.isDeleteModalOpen}
+        onOpenChange={actions.setIsDeleteModalOpen}
+        title="Hapus Peserta"
+        description={
+          actions.deleteTargetId
+            ? "Apakah Anda yakin ingin menghapus peserta ini? Semua riwayat dan registrasi terkait juga mungkin ikut terhapus atau kehilangan referensi. Tindakan ini tidak dapat dibatalkan."
+            : `Apakah Anda yakin ingin menghapus ${actions.deleteTargetIds.length} peserta yang dipilih? Tindakan ini tidak dapat dibatalkan.`
+        }
+        confirmText="Ya, Hapus"
+        cancelText="Batal"
+        onConfirm={actions.handleConfirmDelete}
+        isLoading={actions.isDeleting}
+        variant="destructive"
       />
     </div>
   );
