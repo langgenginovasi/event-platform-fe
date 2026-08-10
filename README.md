@@ -58,6 +58,35 @@ Frontend untuk **Event Platform V2** — sistem manajemen acara dan absensi digi
 | `npm run start` | Menjalankan production build |
 | `npm run lint` | ESLint |
 
+## Deployment (Docker / Dokploy)
+
+Dockerfile menggunakan **multi-stage build** (`next build` di stage `build`). Karena
+`NEXT_PUBLIC_API_URL` di-inline oleh Next.js **saat build**, nilai tersebut wajib
+dilewatkan sebagai **Build Argument** — bukan hanya runtime env.
+
+```bash
+docker build \
+  --build-arg NEXT_PUBLIC_API_URL=https://api.domain-anda.com/api \
+  -t event-platform-fe .
+docker run -p 3000:3000 \
+  -e NEXTAUTH_SECRET="<secret>" \
+  -e NEXTAUTH_URL="https://app.domain-anda.com" \
+  -e NEXT_PUBLIC_API_URL="https://api.domain-anda.com/api" \
+  event-platform-fe
+```
+
+> Di Dokploy: set `NEXT_PUBLIC_API_URL` pada bagian **Build** (build args), bukan
+> hanya di runtime env. `NEXT_PUBLIC_API_URL` tetap dibutuhkan di runtime karena
+> dipakai juga oleh NextAuth (`/api/auth/[...nextauth]`) yang membaca env saat runtime.
+
+### Verifikasi hasil build
+
+Setelah build, pastikan bundle tidak lagi memuat fallback `localhost:3001`:
+
+```bash
+grep -r "localhost:3001" .next/static && echo "MASIH ADA FALLBACK" || echo "OK - pakai nilai env"
+```
+
 ## Struktur Folder
 
 ```
