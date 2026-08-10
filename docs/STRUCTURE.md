@@ -2,7 +2,7 @@
 
 Dokumen aturan struktur folder, naming conventions, dan coding patterns untuk `event-platform-fe`.
 
-> **Terakhir disinkronkan:** 9 August 2026 — semua halaman utama sudah pakai SWR, halaman inline sudah diextract (session, users, settings, scan), filter tabel (participation/membership type) sudah terpasang di registration & participant, dan `window.confirm()` sudah diganti `ConfirmationDialog` (via `useDeleteConfirmation`).
+> **Terakhir disinkronkan:** 10 August 2026 — semua halaman utama sudah pakai SWR, halaman inline sudah diextract (session, users, settings, scan), filter tabel (participation/membership type) sudah terpasang di registration & participant, bulk edit tipe keanggotaan/kepesertaan sudah ada (BulkEditMembershipTypeModal + BulkEditParticipationTypeModal), dan `window.confirm()` sudah diganti `ConfirmationDialog` (via `useDeleteConfirmation`).
 
 ---
 
@@ -79,6 +79,7 @@ components/features/
 │   ├── Registration/     # Registration management
 │   │   ├── AddParticipantModal.tsx
 │   │   ├── BulkActionBar.tsx
+│   │   ├── BulkEditParticipationTypeModal.tsx
 │   │   ├── CheckInEventModal.tsx
 │   │   ├── DetailRegistrationModal.tsx
 │   │   ├── InlineSaveCancelButtons.tsx
@@ -93,6 +94,7 @@ components/features/
 │   ├── DetailParticipantModal.tsx
 │   ├── ImportExcelModal.tsx
 │   ├── AddToEventGroupModal.tsx
+│   ├── BulkEditMembershipTypeModal.tsx
 │   └── ParticipantBulkActionBar.tsx
 ├── email-log/            # Email queue log
 │   ├── EmailLogSummary.tsx
@@ -178,6 +180,7 @@ components/features/
 │   └── Registration/
 │       ├── AddParticipantModal.tsx
 │       ├── BulkActionBar.tsx
+│       ├── BulkEditParticipationTypeModal.tsx
 │       ├── CheckInEventModal.tsx
 │       ├── DetailRegistrationModal.tsx
 │       ├── InlineSaveCancelButtons.tsx
@@ -189,6 +192,7 @@ components/features/
 │   ├── DetailParticipantModal.tsx
 │   ├── ImportExcelModal.tsx
 │   ├── AddToEventGroupModal.tsx
+│   ├── BulkEditMembershipTypeModal.tsx
 │   └── ParticipantBulkActionBar.tsx
 │
 ├── email-log/

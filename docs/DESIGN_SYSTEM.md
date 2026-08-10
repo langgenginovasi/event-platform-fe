@@ -501,6 +501,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 ### Bulk Action Bar
 
+Bar aksi muncul saat ada item terpilih (`selectedIds.length > 0`). Selain aksi kontekstual (Check In, Kirim Email, Hapus), sekarang menyediakan:
+
+| Tombol | Warna | Fungsi |
+|--------|-------|--------|
+| **Batal Pilih** | `outline` slate | Bersihkan seleksi (`clearSelection`) — ikon `X` |
+| **Ubah Tipe Keanggotaan** (participant) | `outline` violet | Buka `BulkEditMembershipTypeModal` — ikon `Tags` |
+| **Ubah Tipe Kepesertaan** (registration) | `outline` violet | Buka `BulkEditParticipationTypeModal` — ikon `Tags` |
+| Check In / Check Out | emerald / amber | Check-in massal |
+| Kirim Email | blue | Email massal |
+| Hapus | destructive | Delete massal |
+
 ```tsx
 {selectedIds.length > 0 && (
   <div className="bg-blue-50/50 border-b border-blue-100 px-5 py-3 flex items-center justify-between">
@@ -508,12 +519,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
       {selectedIds.length} item dipilih
     </span>
     <div className="flex gap-2">
+      <Button size="sm" variant="outline" className="text-slate-600 ..." onClick={clearSelection}>
+        <X className="w-3.5 h-3.5 mr-1" /> Batal Pilih
+      </Button>
+      <Button size="sm" variant="outline" className="text-violet-600 ..." onClick={onEditType}>
+        <Tags className="w-3.5 h-3.5 mr-1" /> Ubah Tipe
+      </Button>
       <Button size="sm" variant="outline" className="text-emerald-600 ...">Check In</Button>
       <Button size="sm" variant="outline" className="text-red-600 ...">Hapus</Button>
     </div>
   </div>
 )}
 ```
+
+> Bulk edit type memakai `PUT /api/participants/bulk-update` dan `PUT /api/registrations/bulk-update` (lihat `event-platform-be/docs/API.md`).
 
 ---
 
