@@ -19,6 +19,7 @@ import {
   Mail,
   ChevronLeft,
   Zap,
+  Trash2,
 } from "lucide-react";
 import {
   Sheet,
@@ -28,6 +29,7 @@ import {
 import { Button } from "@/components/ui/button";
 import useSWR from "swr";
 import { GET_EVENT_GROUP_DETAIL } from "@/lib/api-endpoints";
+import { isDev } from "@/lib/env";
 
 // ─── Nav item config ────────────────────────────────────────────────────────
 
@@ -41,6 +43,9 @@ const superAdminExtras: NavItem[] = [
   { name: "Manajemen Pengguna", href: "/dashboard/users", icon: Users },
   { name: "Pengaturan", href: "/dashboard/settings", icon: Settings },
   { name: "Pengujian", href: "/dashboard/testing", icon: Zap },
+  ...(isDev
+    ? [{ name: "Bulk Delete (Dev)", href: "/dashboard/dev-tools/cascade-delete", icon: Trash2 }]
+    : []),
 ];
 
 // Menu global untuk SUPER_ADMIN & EVENT_ADMIN (bedanya hanya EVENT_ADMIN tidak ada menu Peserta)

@@ -108,8 +108,4 @@ export function formatGender(gender?: string | null): string {
   return gender === "P" ? "Perempuan" : "Laki-laki"
 }
 
-// ─── Error Utilities ────────────────────────────────────────────────────────
-
-export function extractApiError(error: any, fallback = "Terjadi kesalahan"): string {
-  return error?.response?.data?.error || error?.message || fallback
-}
+export { extractApiError } from "./error";

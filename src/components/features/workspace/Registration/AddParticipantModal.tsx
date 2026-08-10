@@ -27,6 +27,9 @@ interface AddParticipantModalProps {
   participationTypes: any[];
   participationTypeId: string;
   onParticipationTypeChange: (val: string) => void;
+  membershipTypes: any[];
+  membershipTypeId: string;
+  onMembershipTypeChange: (val: string) => void;
   isRegistering: boolean;
   onRegister: () => void;
 }
@@ -43,6 +46,9 @@ export function AddParticipantModal({
   participationTypes,
   participationTypeId,
   onParticipationTypeChange,
+  membershipTypes,
+  membershipTypeId,
+  onMembershipTypeChange,
   isRegistering,
   onRegister,
 }: AddParticipantModalProps) {
@@ -85,6 +91,35 @@ export function AddParticipantModal({
                         {pt.participation_type?.name || pt.name}
                       </SelectItem>
                     ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {membershipTypes.length > 0 && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Tipe Keanggotaan</label>
+              <Select
+                items={[
+                  { value: "", label: "-- Semua --" },
+                  ...membershipTypes.map((mt: any) => ({
+                    value: String(mt.id),
+                    label: mt.name,
+                  })),
+                ]}
+                value={membershipTypeId}
+                onValueChange={(v) => onMembershipTypeChange(v as string)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="-- Semua --" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">-- Semua --</SelectItem>
+                  {membershipTypes.map((mt: any) => (
+                    <SelectItem key={mt.id} value={String(mt.id)}>
+                      {mt.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

@@ -3,7 +3,6 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams } from "next/navigation";
 import useSWR from "swr";
-import { Html5Qrcode } from "html5-qrcode";
 import {
   Camera,
   ScanBarcode,
@@ -18,14 +17,16 @@ import {
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { GlassCard } from "@/components/shared/CustomCards";
-import { cn, extractApiError } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { extractApiError } from "@/lib/error";
 import { ScanCard, ScanStep } from "@/components/shared/ScanCard";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { api } from "@/lib/api";
 import { GET_EVENTS } from "@/lib/api-endpoints";
+import { QRScanner } from "@/components/features/workspace/Scan/QRScanner";
+import { ScanStatusOverlay, type ScanStatus } from "@/components/features/workspace/Scan/ScanStatusOverlay";
 
 type ScanMode = "camera" | "scanner";
-type ScanStatus = "IDLE" | "SUCCESS" | "ERROR" | "LOADING";
 
 export default function WorkspaceScanPage() {
   const { id } = useParams() as { id: string };
@@ -340,44 +341,8 @@ export default function WorkspaceScanPage() {
             Arahkan kamera ke QR Code peserta untuk check-in/out.
           </DialogDescription>
 
-          {scanStatus === "LOADING" ? (
-            <div className="flex flex-col items-center justify-center text-center space-y-4 p-8 h-full bg-white animate-in fade-in zoom-in duration-300 z-20">
-              <div className="w-32 h-32 rounded-full flex items-center justify-center shadow-lg bg-blue-100 shadow-blue-500/20">
-                <Loader2 className="w-16 h-16 text-blue-600 animate-spin" />
-              </div>
-              <div>
-                <h3 className="text-3xl font-bold text-gray-900 mb-2">Memproses...</h3>
-                <p className="text-lg font-medium text-blue-600">{scanMessage}</p>
-              </div>
-            </div>
-          ) : scanStatus === "SUCCESS" || scanStatus === "ERROR" ? (
-            <div className="flex flex-col items-center justify-center text-center space-y-4 p-8 h-full bg-white animate-in fade-in zoom-in duration-300 z-20">
-              <div
-                className={cn(
-                  "w-32 h-32 rounded-full flex items-center justify-center shadow-lg",
-                  scanStatus === "SUCCESS"
-                    ? "bg-emerald-100 shadow-emerald-500/20"
-                    : "bg-red-100 shadow-red-500/20"
-                )}
-              >
-                {scanStatus === "SUCCESS" ? (
-                  <CheckCircle2 className="w-16 h-16 text-emerald-600" />
-                ) : (
-                  <AlertCircle className="w-16 h-16 text-red-600" />
-                )}
-              </div>
-              <div>
-                <h3 className="text-3xl font-bold text-gray-900 mb-2">
-                  {scanStatus === "SUCCESS" ? "Peserta Terverifikasi" : "Akses Ditolak"}
-                </h3>
-                <p className={cn("text-lg font-medium", scanStatus === "SUCCESS" ? "text-emerald-600" : "text-red-600")}>
-                  {scanMessage}
-                </p>
-                {scanResult && (
-                  <p className="text-sm text-gray-400 mt-4 break-all px-4 max-w-lg mx-auto">{scanResult}</p>
-                )}
-              </div>
-            </div>
+          {scanStatus === "LOADING" || scanStatus === "SUCCESS" || scanStatus === "ERROR" ? (
+            <ScanStatusOverlay status={scanStatus} message={scanMessage} result={scanResult} />
           ) : (
             <div className="relative w-full h-full bg-black flex flex-col">
               {/* Close Button */}
@@ -418,115 +383,5 @@ export default function WorkspaceScanPage() {
         </DialogContent>
       </Dialog>
     </div>
-  );
-}
-
-const QR_SCANNER_ELEMENT_ID = "dashboard-qr-reader";
-
-function QRScanner({
-  onScanSuccess,
-  onError,
-}: {
-  onScanSuccess: (decodedText: string) => void;
-  onError: (message: string) => void;
-}) {
-  const successRef = useRef(onScanSuccess);
-  const errorRef = useRef(onError);
-  const scannerRef = useRef<Html5Qrcode | null>(null);
-
-  useEffect(() => {
-    successRef.current = onScanSuccess;
-  }, [onScanSuccess]);
-
-  useEffect(() => {
-    errorRef.current = onError;
-  }, [onError]);
-
-  useEffect(() => {
-    let cancelled = false;
-    let scanner: Html5Qrcode | null = null;
-
-    const startScanner = async () => {
-      // Small delay to ensure DOM element is ready & dialog finished animating
-      await new Promise((r) => setTimeout(r, 250));
-      if (cancelled) return;
-
-      const element = document.getElementById(QR_SCANNER_ELEMENT_ID);
-      if (!element) {
-        errorRef.current("Elemen pemindai tidak ditemukan.");
-        return;
-      }
-
-      if (!navigator.mediaDevices?.getUserMedia || !navigator.mediaDevices?.enumerateDevices) {
-        errorRef.current("Kamera tidak didukung. Pastikan halaman diakses melalui HTTPS atau localhost.");
-        return;
-      }
-
-      scanner = new Html5Qrcode(QR_SCANNER_ELEMENT_ID);
-      scannerRef.current = scanner;
-
-      try {
-        const cameras = await Html5Qrcode.getCameras();
-        if (cancelled) return;
-        if (cameras.length === 0) {
-          errorRef.current("Tidak ada kamera yang terdeteksi di perangkat ini.");
-          return;
-        }
-
-        // Prefer back/rear camera
-        const backCamera = cameras.find((c) => /back|rear/i.test(c.label));
-        const cameraId = backCamera?.id || cameras[0].id;
-
-        await scanner.start(
-          cameraId,
-          { fps: 10, qrbox: { width: 200, height: 200 }, aspectRatio: 1.0 },
-          (text) => {
-            if (!cancelled) successRef.current(text);
-          },
-          () => {} // ignore scan failures
-        );
-      } catch (err: any) {
-        if (cancelled) return;
-        console.error("Failed to start QR scanner:", err);
-        if (err?.name === "NotAllowedError") {
-          errorRef.current("Izin kamera ditolak. Izinkan akses kamera pada browser Anda.");
-        } else if (err?.name === "NotFoundError" || err?.name === "DevicesNotFoundError") {
-          errorRef.current("Tidak ada kamera yang terdeteksi di perangkat ini.");
-        } else {
-          errorRef.current(
-            `Gagal memulai kamera: ${err?.message || "kesalahan tidak diketahui"}`
-          );
-        }
-      }
-    };
-
-    startScanner();
-
-    return () => {
-      cancelled = true;
-      if (scanner) {
-        try {
-          if (scanner.isScanning) {
-            scanner.stop().then(() => {
-              scanner?.clear();
-            }).catch(() => {
-              scanner?.clear();
-            });
-          } else {
-            scanner.clear();
-          }
-        } catch (e) {
-          console.error("Cleanup error", e);
-        }
-      }
-      scannerRef.current = null;
-    };
-  }, []);
-
-  return (
-    <div
-      id={QR_SCANNER_ELEMENT_ID}
-      className="w-full h-full flex-1 [&_video]:object-cover [&_video]:w-full [&_video]:h-full"
-    />
   );
 }

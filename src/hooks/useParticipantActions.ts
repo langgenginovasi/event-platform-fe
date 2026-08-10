@@ -5,7 +5,7 @@ import useSWR from "swr";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { api } from "@/lib/api";
-import { extractApiError } from "@/lib/utils";
+import { extractApiError } from "@/lib/error";
 import { useBulkSelection } from "./useBulkSelection";
 import {
   GET_PARTICIPANTS,
@@ -66,9 +66,10 @@ function normalizeIdentificationType(value: string): string | undefined {
 export function useParticipantActions() {
   const [keyword, setKeyword] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [membershipTypeFilter, setMembershipTypeFilter] = useState("");
 
   const { data: getParticipant, isLoading, mutate: refreshList } = useSWR(
-    GET_PARTICIPANTS(currentPage, 10, keyword)
+    GET_PARTICIPANTS(currentPage, 10, keyword, undefined, membershipTypeFilter)
   );
 
   const participant: Participant[] = getParticipant?.data ?? [];
@@ -128,8 +129,28 @@ export function useParticipantActions() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ── Bulk Selection State ───────────────────────────────────────────
-  const { selectedIds, setSelectedIds, handleSelectAll, handleSelectOne, clearSelection } =
+  const { selectedIds, setSelectedIds, handleSelectOne, clearSelection } =
     useBulkSelection({ deps: [currentPage, keyword] });
+
+  const [isSelectingAll, setIsSelectingAll] = useState(false);
+
+  const handleSelectAll = async (items: any[], checked: boolean) => {
+    if (checked) {
+      setIsSelectingAll(true);
+      try {
+        const res = await api.get(GET_PARTICIPANTS(1, -1, keyword, undefined, membershipTypeFilter));
+        const allIds = (res as any).data.map((p: any) => p.id);
+        setSelectedIds(allIds);
+        toast.success(`Berhasil memilih ${allIds.length} peserta`);
+      } catch (error) {
+        toast.error("Gagal memilih semua data");
+      } finally {
+        setIsSelectingAll(false);
+      }
+    } else {
+      setSelectedIds([]);
+    }
+  };
 
   // ── Add to Event Group State ───────────────────────────────────────
   const [openEventGroupModal, setOpenEventGroupModal] = useState(false);
@@ -458,6 +479,8 @@ export function useParticipantActions() {
     setKeyword,
     currentPage,
     setCurrentPage,
+    membershipTypeFilter,
+    setMembershipTypeFilter,
     selectedIds,
     openCreateModal,
     setOpenCreateModal,
@@ -498,6 +521,7 @@ export function useParticipantActions() {
     deleteTargetId,
     deleteTargetIds,
     isDeleting,
+    isSelectingAll,
 
     // Data
     participant,

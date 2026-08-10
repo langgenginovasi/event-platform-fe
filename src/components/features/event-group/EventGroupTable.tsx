@@ -23,9 +23,10 @@ interface EventGroupTableProps {
   items: EventGroupItem[];
   isLoading: boolean;
   onDelete: (id: string) => void;
+  onEmailClick: (id: string, participantCount: number) => void;
 }
 
-export function EventGroupTable({ items, isLoading, onDelete }: EventGroupTableProps) {
+export function EventGroupTable({ items, isLoading, onDelete, onEmailClick }: EventGroupTableProps) {
   const { can } = usePermissions();
   const router = useRouter();
 
@@ -84,6 +85,7 @@ export function EventGroupTable({ items, isLoading, onDelete }: EventGroupTableP
                     variant="outline"
                     size="sm"
                     disabled={event.participants === 0}
+                    onClick={() => onEmailClick(event.id, event.participants)}
                     className={cn(
                       "h-8",
                       event.participants > 0

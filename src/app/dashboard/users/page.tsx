@@ -1,20 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import useSWR from "swr";
 import { api } from "@/lib/api";
-import { extractApiError } from "@/lib/utils";
+import { GET_USERS } from "@/lib/api-endpoints";
 import { Plus, Search, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TableCard } from "@/components/shared/CustomCards";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ConfirmationDialog } from "@/components/shared/ConfirmationDialog";
 import { useDeleteConfirmation } from "@/hooks/useDeleteConfirmation";
 import { TableBodyStates } from "@/components/shared/TableBodyStates";
+import { AddUserModal } from "@/components/features/users/AddUserModal";
 
 interface User {
   id: string;
@@ -24,69 +23,27 @@ interface User {
 }
 
 export default function UsersPage() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
-  const [newUser, setNewUser] = useState({ name: "", email: "", password: "", role: "OPERATOR" });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // ── Delete ──────────────────────────────────────────────────────
   const [deleteTargetName, setDeleteTargetName] = useState("");
+
+  const { data, isLoading, mutate } = useSWR<{ data: User[] }>(GET_USERS());
+  const users = data?.data ?? [];
+
   const deleteConfirmation = useDeleteConfirmation({
     onDelete: async (id) => {
       await api.delete(`/users/${id}`);
-      fetchUsers();
+      mutate();
     },
     successMessage: "Pengguna berhasil dihapus!",
     errorMessage: "Gagal menghapus pengguna.",
   });
-
-  const fetchUsers = async () => {
-    try {
-      setLoading(true);
-      const res = await api.get<{ data: User[] }>("/users");
-      setUsers(res.data);
-    } catch (error) {
-      console.error(error);
-      toast.error(
-        "Gagal memuat data pengguna. Pastikan Anda login sebagai Super Admin.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchUsers();
-  }, []);
 
   const filteredUsers = users.filter(
     (u) =>
       u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       u.email.toLowerCase().includes(searchQuery.toLowerCase()),
   );
-
-  const handleAddUser = async () => {
-    if (!newUser.name || !newUser.email || !newUser.password) {
-      toast.warning("Semua field harus diisi.");
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      await api.post("/users", newUser);
-      toast.success("Pengguna berhasil ditambahkan!");
-      setShowAddModal(false);
-      setNewUser({ name: "", email: "", password: "", role: "OPERATOR" });
-      fetchUsers();
-    } catch (error: any) {
-      const message = extractApiError(error, "Gagal menambahkan pengguna.");
-      toast.error(message);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   const handleDeleteUser = (userId: string, userName: string) => {
     setDeleteTargetName(userName);
@@ -137,9 +94,9 @@ export default function UsersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                <TableBodyStates isLoading={loading} isEmpty={filteredUsers.length === 0} colSpan={4} emptyMessage="Tidak ada pengguna ditemukan." />
+                <TableBodyStates isLoading={isLoading} isEmpty={filteredUsers.length === 0} colSpan={4} emptyMessage="Tidak ada pengguna ditemukan." />
 
-                {!loading && filteredUsers.map((user) => (
+                {!isLoading && filteredUsers.map((user) => (
                     <TableRow key={user.id}>
                       <TableCell className="font-medium text-foreground">{user.name}</TableCell>
                       <TableCell className="text-muted-foreground">{user.email}</TableCell>
@@ -153,9 +110,9 @@ export default function UsersPage() {
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           className="text-destructive hover:text-destructive hover:bg-destructive/10"
                           onClick={() => handleDeleteUser(user.id, user.name)}
                         >
@@ -170,74 +127,12 @@ export default function UsersPage() {
         </TableCard>
       </motion.div>
 
-      {/* Add User Modal */}
-      <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Tambah Pengguna Baru</DialogTitle>
-            <p className="text-sm text-muted-foreground">
-              Masukkan detail pengguna baru. Password minimal 6 karakter.
-            </p>
-          </DialogHeader>
-          <DialogBody className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Nama Lengkap</label>
-              <Input
-                placeholder="Contoh: John Doe"
-                value={newUser.name}
-                onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Email</label>
-              <Input
-                type="email"
-                placeholder="john@example.com"
-                value={newUser.email}
-                onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Password</label>
-              <Input
-                type="password"
-                placeholder="Minimal 6 karakter"
-                value={newUser.password}
-                onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Peran</label>
-              <Select
-                items={[
-                  { value: "OPERATOR", label: "Operator" },
-                  { value: "EVENT_ADMIN", label: "Admin Event" },
-                  { value: "SUPER_ADMIN", label: "Super Admin" },
-                ]}
-                value={newUser.role}
-                onValueChange={(v) => setNewUser({ ...newUser, role: v as string })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih Peran" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="OPERATOR">Operator</SelectItem>
-                  <SelectItem value="EVENT_ADMIN">Admin Event</SelectItem>
-                  <SelectItem value="SUPER_ADMIN">Super Admin</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </DialogBody>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddModal(false)}>Batal</Button>
-            <Button onClick={handleAddUser} disabled={isSubmitting}>
-              {isSubmitting ? "Menyimpan..." : "Simpan"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AddUserModal
+        open={showAddModal}
+        onOpenChange={setShowAddModal}
+        onSaved={() => mutate()}
+      />
 
-      {/* ── Confirmation Dialog: Hapus Pengguna ────────────────── */}
       <ConfirmationDialog
         open={deleteConfirmation.isOpen}
         onOpenChange={deleteConfirmation.setIsOpen}

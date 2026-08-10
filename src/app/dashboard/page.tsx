@@ -66,7 +66,7 @@ export default function EventAdminDashboard() {
       {/* Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
         <div className="lg:col-span-2">
-          <RecentEventGroupsTable groups={actions.recentEventGroups} />
+          <RecentEventGroupsTable groups={actions.recentEventGroups} isLoading={actions.isLoadingEventGroups} />
         </div>
         <DashboardSidebar
           totalCheckIns={actions.totalCheckIns}

@@ -13,21 +13,7 @@ export const GET_EVENT_GROUPS = (page = 1, limit = 10, search = "") => {
 export const GET_EVENT_GROUP_DETAIL = (id: string) => `/event-groups/${id}`;
 
 // ─── Events ─────────────────────────────────────────────────────────────────
-export const GET_EVENTS = (eventGroupId?: string, page = 1, limit = 10, search = "") => {
-  const params = new URLSearchParams();
-  if (eventGroupId) params.append("event_group_id", eventGroupId);
-  if (page) params.append("page", page.toString());
-  if (limit) params.append("limit", limit.toString());
-  if (search) params.append("search", search);
-  return `/events?${params.toString()}`;
-};
-
-export const MUTATE_EVENT = () => `/events`;
-export const MUTATE_EVENT_DETAIL = (id: string | number) => `/events/${id}`;
-
-// ─── Registrations (Participants) ───────────────────────────────────────────
-// ─── Registrations (Participants) ───────────────────────────────────────────
-export const GET_REGISTRATIONS = (eventGroupId?: string, page = 1, limit = 10, search = "", sort?: string, order?: string) => {
+export const GET_EVENTS = (eventGroupId?: string, page = 1, limit = 10, search = "", sort?: string, order?: string) => {
   const params = new URLSearchParams();
   if (eventGroupId) params.append("event_group_id", eventGroupId);
   if (page) params.append("page", page.toString());
@@ -35,6 +21,23 @@ export const GET_REGISTRATIONS = (eventGroupId?: string, page = 1, limit = 10, s
   if (search) params.append("search", search);
   if (sort) params.append("sort", sort);
   if (order) params.append("order", order);
+  return `/events?${params.toString()}`;
+};
+
+export const MUTATE_EVENT = () => `/events`;
+export const MUTATE_EVENT_DETAIL = (id: string | number) => `/events/${id}`;
+
+// ─── Registrations (Participants) ───────────────────────────────────────────
+export const GET_REGISTRATIONS = (eventGroupId?: string, page = 1, limit = 10, search = "", sort?: string, order?: string, participationTypeId?: string, membershipTypeId?: string) => {
+  const params = new URLSearchParams();
+  if (eventGroupId) params.append("event_group_id", eventGroupId);
+  if (page) params.append("page", page.toString());
+  if (limit) params.append("limit", limit.toString());
+  if (search) params.append("search", search);
+  if (sort) params.append("sort", sort);
+  if (order) params.append("order", order);
+  if (participationTypeId) params.append("participation_type_id", participationTypeId);
+  if (membershipTypeId) params.append("membership_type_id", membershipTypeId);
   return `/registrations?${params.toString()}`;
 };
 export const GET_REGISTRATION_DETAIL = (id: string) => `/registrations/${id}`;
@@ -81,12 +84,13 @@ export const GET_SESSIONS = (eventId?: string, page = 1, limit = 10, search = ""
 export const GET_USERS = () => `/users`;
 
 // ─── Participant ──────────────────────────────────────────────────────────────────
-export const GET_PARTICIPANTS = (page = 1, limit = 10, search = "", not_in_event_group?: string, sort?: string, order?: string) => {
+export const GET_PARTICIPANTS = (page = 1, limit = 10, search = "", not_in_event_group?: string, membershipTypeId?: string, sort?: string, order?: string) => {
   const params = new URLSearchParams();
   if (page) params.append("page", page.toString());
   if (limit) params.append("limit", limit.toString());
   if (search) params.append("search", search);
   if (not_in_event_group) params.append("not_in_event_group", not_in_event_group);
+  if (membershipTypeId) params.append("membership_type_id", membershipTypeId);
   if (sort) params.append("sort", sort);
   if (order) params.append("order", order);
   return `/participants?${params.toString()}`;
@@ -94,6 +98,10 @@ export const GET_PARTICIPANTS = (page = 1, limit = 10, search = "", not_in_event
 export const GET_PARTICIPANT_DETAIL = (id: string) => `/participants/${id}`;
 export const GET_PARTICIPANT_HISTORY = (id: string) => `/participants/${id}/history`;
 export const UPDATE_PARTICIPANT = (id: string) => `/participants/${id}`;
+
+// ─── Profile ────────────────────────────────────────────────────────────────
+export const GET_PROFILE = () => `/profile/me`;
+export const UPDATE_PROFILE = () => `/profile/me`;
 
 // ─── Membership Types ────────────────────────────────────────────────────────
 export const GET_MEMBERSHIP_TYPES = () => `/membership-types`;

@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { toast } from "sonner";
-import { extractApiError } from "@/lib/utils";
+import { extractApiError } from "@/lib/error";
 
 interface UseDeleteConfirmationOptions {
   onDelete: (id: string) => Promise<void>;

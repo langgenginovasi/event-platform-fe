@@ -4,7 +4,9 @@ import { useState } from "react";
 import useSWR, { mutate } from "swr";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
-import { GET_EVENT_GROUPS } from "@/lib/api-endpoints";
+import { extractApiError } from "@/lib/error";
+import { GET_EVENT_GROUPS, GET_REGISTRATIONS } from "@/lib/api-endpoints";
+import { pollEmailBatch } from "@/lib/emailJobPolling";
 import { useDeleteConfirmation } from "./useDeleteConfirmation";
 
 export function useEventGroupPageActions() {
@@ -42,8 +44,8 @@ export function useEventGroupPageActions() {
       setErrors({ name: "", start_date: "", end_date: "", api: "" });
       setOpenCreateModal(false);
     } catch (error: any) {
-      setErrors({ name: "", start_date: "", end_date: "", api: error?.message || "Terjadi kesalahan" });
-      toast.error("Terjadi kesalahan sistem.");
+      setErrors({ name: "", start_date: "", end_date: "", api: extractApiError(error, "Terjadi kesalahan") });
+      toast.error(extractApiError(error, "Terjadi kesalahan sistem."));
     } finally {
       setLoadingCreate(false);
     }
@@ -58,6 +60,78 @@ export function useEventGroupPageActions() {
     successMessage: "Grup event berhasil dihapus.",
     errorMessage: "Terjadi masalah saat menghubungi server.",
   });
+
+  // ── Email ke Semua Peserta ──────────────────────────────────────
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [emailTargetEventGroupId, setEmailTargetEventGroupId] = useState<string | null>(null);
+  const [emailTargetCount, setEmailTargetCount] = useState(0);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+
+  const handleOpenEmail = (eventGroupId: string, targetCount: number) => {
+    setEmailTargetEventGroupId(eventGroupId);
+    setEmailTargetCount(targetCount);
+    setIsEmailModalOpen(true);
+  };
+
+  const handleConfirmSendEmail = async (type: "group" | "event" = "group", eventId?: string) => {
+    if (!emailTargetEventGroupId) return;
+    if (type === "event" && !eventId) {
+      toast.error("Pilih event terlebih dahulu");
+      return;
+    }
+
+    setIsSendingEmail(true);
+    try {
+      const regsRes = await api.get<{ data: { id: string }[] }>(
+        GET_REGISTRATIONS(emailTargetEventGroupId, 1, -1, "")
+      );
+      const registrationIds = (regsRes as any)?.data?.map((r: any) => r.id) || [];
+
+      if (registrationIds.length === 0) {
+        toast.warning("Tidak ada peserta terdaftar di event group ini.");
+        return;
+      }
+
+      const res = await api.post<{ data: { queued: number; batch_id: string | null } }>(
+        "/registrations/bulk-send-email",
+        {
+          registration_ids: registrationIds,
+          type,
+          event_id: eventId,
+        }
+      );
+
+      const batchId = res?.data?.batch_id;
+      const queued = res?.data?.queued ?? 0;
+
+      setIsEmailModalOpen(false);
+      setEmailTargetEventGroupId(null);
+      setEmailTargetCount(0);
+
+      if (!batchId || queued === 0) {
+        toast.warning("Tidak ada email yang masuk ke antrean.");
+        return;
+      }
+
+      const toastId = toast.loading(`⏳ ${queued} email masuk antrean, mengirim...`);
+      const result = await pollEmailBatch(batchId, queued, (done, total) => {
+        toast.loading(`⏳ Mengirim email... ${done}/${total}`, { id: toastId });
+      });
+      toast.dismiss(toastId);
+
+      if (result.timedOut) {
+        toast.warning("Waktu tunggu habis. Cek halaman Email Log untuk status pengiriman.", { duration: 6000 });
+      } else if (result.failed === 0) {
+        toast.success(`✅ ${result.sent} email berhasil dikirim!`, { duration: 6000 });
+      } else {
+        toast.warning(`⚠️ ${result.sent} berhasil, ${result.failed} gagal. Cek Email Log untuk detail.`, { duration: 8000 });
+      }
+    } catch (err: any) {
+      toast.error(extractApiError(err, "Gagal mengirim email"));
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
 
   return {
     // Data
@@ -76,6 +150,15 @@ export function useEventGroupPageActions() {
     errors,
     setErrors,
     handleCreateEventGroup,
+
+    // Email
+    isEmailModalOpen,
+    setIsEmailModalOpen,
+    emailTargetEventGroupId,
+    emailTargetCount,
+    isSendingEmail,
+    handleOpenEmail,
+    handleConfirmSendEmail,
 
     // Delete
     ...deleteConfirmation,

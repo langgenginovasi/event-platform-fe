@@ -3,10 +3,11 @@
 import { useState } from "react";
 import useSWR, { mutate } from "swr";
 import { api } from "@/lib/api";
+import { extractApiError } from "@/lib/error";
 import { GET_EVENT_GROUPS, GET_EVENTS, GET_REGISTRATIONS, GET_ATTENDANCES } from "@/lib/api-endpoints";
 
 export function useDashboardActions() {
-  const { data: eventGroupsRes } = useSWR(GET_EVENT_GROUPS());
+  const { data: eventGroupsRes, isLoading: isLoadingEventGroups } = useSWR(GET_EVENT_GROUPS());
   const { data: eventsRes } = useSWR(GET_EVENTS());
   const { data: registrationsRes } = useSWR(GET_REGISTRATIONS());
   const { data: attendancesRes } = useSWR(GET_ATTENDANCES());
@@ -67,7 +68,7 @@ export function useDashboardActions() {
       setErrors({ name: "", start_date: "", end_date: "", api: "" });
       setOpenCreateModal(false);
     } catch (error: any) {
-      setErrors({ name: "", start_date: "", end_date: "", api: error?.message || "Terjadi kesalahan" });
+      setErrors({ name: "", start_date: "", end_date: "", api: extractApiError(error, "Terjadi kesalahan") });
     } finally {
       setLoadingCreate(false);
     }
@@ -85,6 +86,7 @@ export function useDashboardActions() {
     totalCheckIns,
     totalCheckOuts,
     recentEventGroups,
+    isLoadingEventGroups,
 
     // Create modal
     openCreateModal,

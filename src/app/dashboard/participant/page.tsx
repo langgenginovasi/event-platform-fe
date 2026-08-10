@@ -96,6 +96,33 @@ export default function ParticipantPage() {
               />
             </div>
 
+            <Select
+              items={actions.membershipTypes.map((mt: any) => ({ value: String(mt.id), label: mt.name }))}
+              value={actions.membershipTypeFilter}
+              onValueChange={(v) => {
+                actions.setMembershipTypeFilter(v as string);
+                actions.setCurrentPage(1);
+              }}
+            >
+              <SelectTrigger className="w-full sm:w-52 h-10 bg-slate-50 text-sm">
+                <span className="truncate">
+                  {actions.membershipTypeFilter
+                    ? actions.membershipTypes.find(
+                        (mt: any) => String(mt.id) === actions.membershipTypeFilter
+                      )?.name
+                    : "Semua Tipe Keanggotaan"}
+                </span>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Semua Tipe Keanggotaan</SelectItem>
+                {actions.membershipTypes.map((mt: any) => (
+                  <SelectItem key={mt.id} value={String(mt.id)}>
+                    {mt.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
             {can("participantManage") && (
               <Button
                 onClick={() => actions.setOpenCreateModal(true)}
@@ -342,8 +369,8 @@ export default function ParticipantPage() {
         title="Hapus Peserta"
         description={
           actions.deleteTargetId
-            ? "Apakah Anda yakin ingin menghapus peserta ini? Semua riwayat dan registrasi terkait juga mungkin ikut terhapus atau kehilangan referensi. Tindakan ini tidak dapat dibatalkan."
-            : `Apakah Anda yakin ingin menghapus ${actions.deleteTargetIds.length} peserta yang dipilih? Tindakan ini tidak dapat dibatalkan.`
+            ? "Apakah Anda yakin ingin menghapus peserta ini? Peserta yang masih terdaftar di event group tidak dapat dihapus — hapus registrasinya terlebih dahulu. Tindakan ini tidak dapat dibatalkan."
+            : `Apakah Anda yakin ingin menghapus ${actions.deleteTargetIds.length} peserta yang dipilih? Peserta yang masih terdaftar di event group tidak dapat dihapus. Tindakan ini tidak dapat dibatalkan.`
         }
         confirmText="Ya, Hapus"
         cancelText="Batal"

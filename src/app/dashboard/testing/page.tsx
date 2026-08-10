@@ -21,8 +21,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { GlassCard } from "@/components/shared/CustomCards";
+import { ConfirmationDialog } from "@/components/shared/ConfirmationDialog";
 import { api } from "@/lib/api";
-import { extractApiError } from "@/lib/utils";
+import { extractApiError } from "@/lib/error";
 import {
   GET_EVENT_GROUPS,
   GET_PARTICIPANTS,
@@ -54,6 +55,7 @@ export default function TestingPage() {
 
   const [selectedEventGroupId, setSelectedEventGroupId] = useState("");
   const [isResetting, setIsResetting] = useState(false);
+  const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
 
   // ── Fetch data for dropdowns ─────────────────────────────────────
   const { data: eventGroupsRes } = useSWR<{ data: any[] }>(GET_EVENT_GROUPS(1, 100, ""));
@@ -486,7 +488,7 @@ export default function TestingPage() {
               </Select>
             </div>
             <Button
-              onClick={handleResetTestData}
+              onClick={() => setIsResetConfirmOpen(true)}
               disabled={isResetting || !selectedEventGroupId}
               className="w-full"
               variant="destructive"
@@ -501,6 +503,22 @@ export default function TestingPage() {
           </div>
         </GlassCard>
       </div>
+
+      <ConfirmationDialog
+        open={isResetConfirmOpen}
+        onOpenChange={setIsResetConfirmOpen}
+        title="Hapus Data Uji"
+        description={
+          `Hapus semua data uji dari grup event "${eventGroups.find((eg: any) => eg.id === selectedEventGroupId)?.name || ""}"? ` +
+          "Registrasi, peserta yang terdaftar, dan catatan kehadirannya akan ikut terhapus. Tindakan ini tidak dapat dibatalkan."
+        }
+        confirmText="Ya, Hapus"
+        variant="danger"
+        isLoading={isResetting}
+        onConfirm={() => {
+          handleResetTestData().finally(() => setIsResetConfirmOpen(false));
+        }}
+      />
     </div>
   );
 }

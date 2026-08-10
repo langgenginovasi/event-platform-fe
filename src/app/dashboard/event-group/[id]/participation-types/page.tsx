@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import useSWR from "swr";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
-import { extractApiError } from "@/lib/utils";
+import { extractApiError } from "@/lib/error";
 import { Button } from "@/components/ui/button";
 import { TableCard } from "@/components/shared/CustomCards";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";

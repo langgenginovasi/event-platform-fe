@@ -8,6 +8,7 @@ import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from "@/components/ui/dialog";
 import { TableToolbar } from "@/components/shared/TableToolbar";
 import { TableBodyStates } from "@/components/shared/TableBodyStates";
+import { ConfirmationDialog } from "@/components/shared/ConfirmationDialog";
 import { generateSlug } from "@/lib/utils";
 
 interface TypeCrudTableProps {
@@ -32,6 +33,11 @@ interface TypeCrudTableProps {
   onDelete: (item: any) => void;
   namePlaceholder?: string;
   slugPlaceholder?: string;
+  isDeleteOpen?: boolean;
+  onDeleteDialogChange?: (open: boolean) => void;
+  isDeleting?: boolean;
+  deleteItemName?: string;
+  onConfirmDelete?: () => void;
 }
 
 export function TypeCrudTable({
@@ -56,6 +62,11 @@ export function TypeCrudTable({
   onDelete,
   namePlaceholder = "Contoh: Nama Type",
   slugPlaceholder = "Contoh: nama-type",
+  isDeleteOpen = false,
+  onDeleteDialogChange,
+  isDeleting = false,
+  deleteItemName,
+  onConfirmDelete,
 }: TypeCrudTableProps) {
   const colSpan = 1 + columns.length + (countColumn ? 1 : 0) + 1;
 
@@ -175,6 +186,17 @@ export function TypeCrudTable({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmationDialog
+        open={isDeleteOpen}
+        onOpenChange={onDeleteDialogChange || (() => {})}
+        title={`Hapus ${entityName}`}
+        description={`Apakah Anda yakin ingin menghapus "${deleteItemName || ""}"? Tindakan ini tidak dapat dibatalkan.`}
+        confirmText="Hapus"
+        variant="danger"
+        isLoading={isDeleting}
+        onConfirm={onConfirmDelete || (() => {})}
+      />
     </div>
   );
 }
