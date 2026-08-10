@@ -71,7 +71,7 @@ export function useRegistrationActions(eventGroupId: string) {
 
   // ── STATE UNTUK BULK SELECTION ────────────────────────────────────
   const { selectedIds, setSelectedIds, handleSelectOne, clearSelection } =
-    useBulkSelection({ deps: [currentPage, keyword] });
+    useBulkSelection({ deps: [currentPage] });
 
   const [isSelectingAll, setIsSelectingAll] = useState(false);
 
@@ -113,6 +113,11 @@ export function useRegistrationActions(eventGroupId: string) {
   const [editingRegId, setEditingRegId] = useState<string | null>(null);
   const [editParticipationValue, setEditParticipationValue] = useState<string>("");
   const [loadingEditId, setLoadingEditId] = useState<string | null>(null);
+
+  // ── STATE UNTUK BULK EDIT PARTICIPATION TYPE ──────────────────
+  const [isBulkEditModalOpen, setIsBulkEditModalOpen] = useState(false);
+  const [bulkParticipationTypeId, setBulkParticipationTypeId] = useState("");
+  const [isBulkUpdating, setIsBulkUpdating] = useState(false);
 
   // Reset accordion when detail modal opens
   useEffect(() => {
@@ -275,7 +280,7 @@ export function useRegistrationActions(eventGroupId: string) {
       await api.post("/registrations/bulk", {
         event_group_id: eventGroupId,
         participant_ids: addSelectedIds,
-        participation_type_id: addParticipationTypeId || undefined,
+        participation_type_id: addParticipationTypeId || null,
       });
       toast.success(`${addSelectedIds.length} peserta berhasil didaftarkan`);
       setIsAddModalOpen(false);
@@ -385,6 +390,29 @@ export function useRegistrationActions(eventGroupId: string) {
     setDeleteTargetId(null);
     setDeleteTargetIds(selectedIds);
     setIsDeleteModalOpen(true);
+  };
+
+  const handleBulkEditParticipationType = async () => {
+    if (selectedIds.length === 0) {
+      toast.warning("Pilih registrasi terlebih dahulu");
+      return;
+    }
+    setIsBulkUpdating(true);
+    try {
+      await api.put("/registrations/bulk-update", {
+        registration_ids: selectedIds,
+        participation_type_id: bulkParticipationTypeId || null,
+      });
+      toast.success(`${selectedIds.length} registrasi berhasil diperbarui`);
+      setIsBulkEditModalOpen(false);
+      setBulkParticipationTypeId("");
+      setSelectedIds([]);
+      mutate();
+    } catch (err: any) {
+      toast.error(extractApiError(err, "Gagal memperbarui tipe kepesertaan"));
+    } finally {
+      setIsBulkUpdating(false);
+    }
   };
 
   const handleBulkSendEmail = async () => {
@@ -510,7 +538,7 @@ export function useRegistrationActions(eventGroupId: string) {
     setLoadingEditId(registrationId);
     try {
       await api.put(`/registrations/${registrationId}`, {
-        participation_type_id: editParticipationValue || undefined,
+        participation_type_id: editParticipationValue || null,
       });
       toast.success("Tipe kepesertaan berhasil diperbarui");
       setEditingRegId(null);
@@ -573,10 +601,16 @@ export function useRegistrationActions(eventGroupId: string) {
     emailTargetIds,
     emailType,
     setEmailType,
+    clearSelection,
     editingRegId,
     editParticipationValue,
     setEditParticipationValue,
     loadingEditId,
+    isBulkEditModalOpen,
+    setIsBulkEditModalOpen,
+    bulkParticipationTypeId,
+    setBulkParticipationTypeId,
+    isBulkUpdating,
 
     // Data
     data,
@@ -610,6 +644,7 @@ export function useRegistrationActions(eventGroupId: string) {
     handleBulkCheckOut,
     executeCheckIn,
     handleBulkDelete,
+    handleBulkEditParticipationType,
     handleBulkSendEmail,
     handleSingleSendEmail,
     handleConfirmSendEmail,

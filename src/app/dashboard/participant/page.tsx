@@ -19,6 +19,7 @@ import { CreateParticipantModal } from "@/components/features/participant/Create
 import { EditParticipantModal } from "@/components/features/participant/EditParticipantModal";
 import { ImportExcelModal } from "@/components/features/participant/ImportExcelModal";
 import { AddToEventGroupModal } from "@/components/features/participant/AddToEventGroupModal";
+import { BulkEditMembershipTypeModal } from "@/components/features/participant/BulkEditMembershipTypeModal";
 import { DetailParticipantModal } from "@/components/features/participant/DetailParticipantModal";
 import { TableBodyStates } from "@/components/shared/TableBodyStates";
 import { ConfirmationDialog } from "@/components/shared/ConfirmationDialog";
@@ -147,8 +148,17 @@ export default function ParticipantPage() {
         <ParticipantBulkActionBar
           selectedCount={actions.selectedIds.length}
           onAddToGroup={() => actions.setOpenEventGroupModal(true)}
+          onEditMembershipType={
+            can("participantManage")
+              ? () => {
+                  actions.setBulkMembershipTypeId("");
+                  actions.setIsBulkEditModalOpen(true);
+                }
+              : undefined
+          }
           onDelete={actions.handleBulkDelete}
           canDelete={can("participantManage")}
+          onClearSelection={actions.clearSelection}
         />
 
         {/* Data Table */}
@@ -352,6 +362,17 @@ export default function ParticipantPage() {
         onEventGroupChange={actions.setSelectedEventGroupId}
         isLoading={actions.loadingAddToGroup}
         onSubmit={actions.handleAddToEventGroup}
+      />
+
+      <BulkEditMembershipTypeModal
+        open={actions.isBulkEditModalOpen}
+        onOpenChange={actions.setIsBulkEditModalOpen}
+        selectedCount={actions.selectedIds.length}
+        membershipTypes={actions.membershipTypes}
+        membershipTypeId={actions.bulkMembershipTypeId}
+        onMembershipTypeChange={actions.setBulkMembershipTypeId}
+        isLoading={actions.isBulkUpdating}
+        onSubmit={actions.handleBulkEditMembershipType}
       />
 
       <DetailParticipantModal

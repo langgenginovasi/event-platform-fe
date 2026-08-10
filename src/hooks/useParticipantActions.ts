@@ -116,6 +116,11 @@ export function useParticipantActions() {
     api: "",
   });
 
+  // ── Bulk Edit Membership Type State ──────────────────────────────
+  const [isBulkEditModalOpen, setIsBulkEditModalOpen] = useState(false);
+  const [bulkMembershipTypeId, setBulkMembershipTypeId] = useState("");
+  const [isBulkUpdating, setIsBulkUpdating] = useState(false);
+
   // ── Inline Edit Keanggotaan State ────────────────────────────────
   const [editingParticipantIdInline, setEditingParticipantIdInline] = useState<string | null>(null);
   const [editMembershipValue, setEditMembershipValue] = useState<string>("");
@@ -130,7 +135,7 @@ export function useParticipantActions() {
 
   // ── Bulk Selection State ───────────────────────────────────────────
   const { selectedIds, setSelectedIds, handleSelectOne, clearSelection } =
-    useBulkSelection({ deps: [currentPage, keyword] });
+    useBulkSelection({ deps: [currentPage] });
 
   const [isSelectingAll, setIsSelectingAll] = useState(false);
 
@@ -235,7 +240,10 @@ export function useParticipantActions() {
 
     try {
       setLoadingCreate(true);
-      await api.post("/participants", form);
+      await api.post("/participants", {
+        ...form,
+        membership_type_id: form.membership_type_id || null,
+      });
 
       await refreshList();
       setForm({ name: "", email: "", gender: "", company: "", membership_type_id: "" });
@@ -276,7 +284,10 @@ export function useParticipantActions() {
 
     try {
       setLoadingEdit(true);
-      await api.put(UPDATE_PARTICIPANT(editingParticipantId), editForm);
+      await api.put(UPDATE_PARTICIPANT(editingParticipantId), {
+        ...editForm,
+        membership_type_id: editForm.membership_type_id || null,
+      });
 
       await refreshList();
       setOpenEditModal(false);
@@ -307,7 +318,7 @@ export function useParticipantActions() {
     setLoadingEditMembershipId(participantId);
     try {
       await api.put(UPDATE_PARTICIPANT(participantId), {
-        membership_type_id: editMembershipValue || undefined,
+        membership_type_id: editMembershipValue || null,
       });
       toast.success("Tipe keanggotaan berhasil diperbarui");
       setEditingParticipantIdInline(null);
@@ -437,6 +448,29 @@ export function useParticipantActions() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  const handleBulkEditMembershipType = async () => {
+    if (selectedIds.length === 0) {
+      toast.warning("Pilih peserta terlebih dahulu");
+      return;
+    }
+    setIsBulkUpdating(true);
+    try {
+      await api.put("/participants/bulk-update", {
+        participant_ids: selectedIds,
+        membership_type_id: bulkMembershipTypeId || null,
+      });
+      toast.success(`${selectedIds.length} peserta berhasil diperbarui`);
+      setIsBulkEditModalOpen(false);
+      setBulkMembershipTypeId("");
+      setSelectedIds([]);
+      await refreshList();
+    } catch (err: any) {
+      toast.error(extractApiError(err, "Gagal memperbarui tipe keanggotaan"));
+    } finally {
+      setIsBulkUpdating(false);
+    }
+  };
+
   const handleDelete = (participantId: string) => {
     setDeleteTargetId(participantId);
     setDeleteTargetIds([]);
@@ -522,6 +556,12 @@ export function useParticipantActions() {
     deleteTargetIds,
     isDeleting,
     isSelectingAll,
+    isBulkEditModalOpen,
+    setIsBulkEditModalOpen,
+    bulkMembershipTypeId,
+    setBulkMembershipTypeId,
+    clearSelection,
+    isBulkUpdating,
 
     // Data
     participant,
@@ -546,6 +586,7 @@ export function useParticipantActions() {
     handleDelete,
     handleBulkDelete,
     handleConfirmDelete,
+    handleBulkEditMembershipType,
 
     // Inline edit keanggotaan
     editingParticipantIdInline,

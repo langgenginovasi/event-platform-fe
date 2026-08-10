@@ -31,6 +31,7 @@ import {
 } from "@/lib/registration-helpers";
 
 import { BulkActionBar } from "@/components/features/workspace/Registration/BulkActionBar";
+import { BulkEditParticipationTypeModal } from "@/components/features/workspace/Registration/BulkEditParticipationTypeModal";
 import { AddParticipantModal } from "@/components/features/workspace/Registration/AddParticipantModal";
 import { CheckInEventModal } from "@/components/features/workspace/Registration/CheckInEventModal";
 import { DetailRegistrationModal } from "@/components/features/workspace/Registration/DetailRegistrationModal";
@@ -157,7 +158,16 @@ export default function RegistrationPage() {
           onSendEmail={canBulk ? reg.handleBulkSendEmail : undefined}
           onCheckIn={canBulk ? reg.handleBulkCheckIn : undefined}
           onCheckOut={canBulk ? reg.handleBulkCheckOut : undefined}
+          onEditParticipationType={
+            canBulk
+              ? () => {
+                  reg.setBulkParticipationTypeId("");
+                  reg.setIsBulkEditModalOpen(true);
+                }
+              : undefined
+          }
           onDelete={canBulk ? reg.handleBulkDelete : undefined}
+          onClearSelection={reg.clearSelection}
         />
 
         <div className="overflow-x-auto">
@@ -446,6 +456,17 @@ export default function RegistrationPage() {
         onMembershipTypeChange={reg.setAddMembershipTypeId}
         isRegistering={reg.isRegistering}
         onRegister={reg.handleBulkRegister}
+      />
+
+      <BulkEditParticipationTypeModal
+        open={reg.isBulkEditModalOpen}
+        onOpenChange={reg.setIsBulkEditModalOpen}
+        selectedCount={reg.selectedIds.length}
+        participationTypes={reg.participationTypes}
+        participationTypeId={reg.bulkParticipationTypeId}
+        onParticipationTypeChange={reg.setBulkParticipationTypeId}
+        isLoading={reg.isBulkUpdating}
+        onSubmit={reg.handleBulkEditParticipationType}
       />
 
       <CheckInEventModal
