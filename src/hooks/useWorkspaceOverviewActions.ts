@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import useSWR from "swr";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
-import { extractApiError } from "@/lib/utils";
+import { extractApiError } from "@/lib/error";
 import { GET_EVENT_GROUP_DETAIL } from "@/lib/api-endpoints";
 
 export function useWorkspaceOverviewActions(eventGroupId: string) {

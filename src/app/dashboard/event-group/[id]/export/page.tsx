@@ -9,7 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
-import { extractApiError, formatDateTime } from "@/lib/utils";
+import { extractApiError } from "@/lib/error";
+import { formatDateTime } from "@/lib/utils";
 import { api } from "@/lib/api";
 import { GET_EVENTS, GET_ATTENDANCES } from "@/lib/api-endpoints";
 import { ATTENDANCE_EXPORT_COLUMNS, toAttendanceExportRow } from "@/lib/attendance-export";

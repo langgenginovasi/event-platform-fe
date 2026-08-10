@@ -33,7 +33,9 @@ async function authFetch<T = unknown>(
   const res = await fetch(url, {
     ...rest,
     headers: {
-      "Content-Type": "application/json",
+      ...(rest.body !== undefined
+        ? { "Content-Type": "application/json" }
+        : {}),
       ...(session?.user?.accessToken
         ? { Authorization: `Bearer ${session.user.accessToken}` }
         : {}),
@@ -43,10 +45,16 @@ async function authFetch<T = unknown>(
 
   if (!res.ok) {
     const errBody = await res.json().catch(() => ({}));
+    const err = errBody as { error?: string; message?: string };
     throw new Error(
-      (errBody as { error?: string }).error ||
+      err.message ||
+        err.error ||
         `HTTP ${res.status}: ${res.statusText}`
     );
+  }
+
+  if (res.status === 204) {
+    return undefined as T;
   }
 
   return res.json();
@@ -70,8 +78,11 @@ export const api = {
       body: body ? JSON.stringify(body) : undefined,
     }),
 
-  delete: <T = unknown>(endpoint: string) =>
-    authFetch<T>(endpoint, { method: "DELETE" }),
+  delete: <T = unknown>(endpoint: string, body?: unknown) =>
+    authFetch<T>(endpoint, {
+      method: "DELETE",
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    }),
 };
 
 export default api;

@@ -31,6 +31,7 @@ import {
 } from "@/lib/registration-helpers";
 
 import { BulkActionBar } from "@/components/features/workspace/Registration/BulkActionBar";
+import { BulkEditParticipationTypeModal } from "@/components/features/workspace/Registration/BulkEditParticipationTypeModal";
 import { AddParticipantModal } from "@/components/features/workspace/Registration/AddParticipantModal";
 import { CheckInEventModal } from "@/components/features/workspace/Registration/CheckInEventModal";
 import { DetailRegistrationModal } from "@/components/features/workspace/Registration/DetailRegistrationModal";
@@ -95,12 +96,78 @@ export default function RegistrationPage() {
           }
         />
 
+        {/* ── Filter Bar ─────────────────────────────────────────── */}
+        <div className="flex flex-col sm:flex-row gap-3 px-5 py-4 border-b border-gray-100">
+          <Select
+            items={reg.participationTypes.map((pt: any) => ({ value: String(pt.id), label: pt.name }))}
+            value={reg.participationTypeFilter}
+            onValueChange={(v) => {
+              reg.setParticipationTypeFilter(v as string);
+              reg.setCurrentPage(1);
+            }}
+          >
+            <SelectTrigger className="w-full sm:w-60 h-10 bg-slate-50 text-sm">
+              <span className="truncate">
+                {reg.participationTypeFilter
+                  ? reg.participationTypes.find(
+                      (pt: any) => String(pt.id) === reg.participationTypeFilter
+                    )?.name
+                  : "Semua Tipe Kepesertaan"}
+              </span>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Semua Tipe Kepesertaan</SelectItem>
+              {reg.participationTypes.map((pt: any) => (
+                <SelectItem key={pt.id} value={String(pt.id)}>
+                  {pt.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select
+            items={reg.membershipTypes.map((mt: any) => ({ value: String(mt.id), label: mt.name }))}
+            value={reg.membershipTypeFilter}
+            onValueChange={(v) => {
+              reg.setMembershipTypeFilter(v as string);
+              reg.setCurrentPage(1);
+            }}
+          >
+            <SelectTrigger className="w-full sm:w-60 h-10 bg-slate-50 text-sm">
+              <span className="truncate">
+                {reg.membershipTypeFilter
+                  ? reg.membershipTypes.find(
+                      (mt: any) => String(mt.id) === reg.membershipTypeFilter
+                    )?.name
+                  : "Semua Tipe Keanggotaan"}
+              </span>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Semua Tipe Keanggotaan</SelectItem>
+              {reg.membershipTypes.map((mt: any) => (
+                <SelectItem key={mt.id} value={String(mt.id)}>
+                  {mt.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         <BulkActionBar
           selectedCount={canBulk ? reg.selectedIds.length : 0}
           onSendEmail={canBulk ? reg.handleBulkSendEmail : undefined}
           onCheckIn={canBulk ? reg.handleBulkCheckIn : undefined}
           onCheckOut={canBulk ? reg.handleBulkCheckOut : undefined}
+          onEditParticipationType={
+            canBulk
+              ? () => {
+                  reg.setBulkParticipationTypeId("");
+                  reg.setIsBulkEditModalOpen(true);
+                }
+              : undefined
+          }
           onDelete={canBulk ? reg.handleBulkDelete : undefined}
+          onClearSelection={reg.clearSelection}
         />
 
         <div className="overflow-x-auto">
@@ -384,8 +451,22 @@ export default function RegistrationPage() {
         participationTypes={reg.participationTypes}
         participationTypeId={reg.addParticipationTypeId}
         onParticipationTypeChange={reg.setAddParticipationTypeId}
+        membershipTypes={reg.membershipTypes}
+        membershipTypeId={reg.addMembershipTypeId}
+        onMembershipTypeChange={reg.setAddMembershipTypeId}
         isRegistering={reg.isRegistering}
         onRegister={reg.handleBulkRegister}
+      />
+
+      <BulkEditParticipationTypeModal
+        open={reg.isBulkEditModalOpen}
+        onOpenChange={reg.setIsBulkEditModalOpen}
+        selectedCount={reg.selectedIds.length}
+        participationTypes={reg.participationTypes}
+        participationTypeId={reg.bulkParticipationTypeId}
+        onParticipationTypeChange={reg.setBulkParticipationTypeId}
+        isLoading={reg.isBulkUpdating}
+        onSubmit={reg.handleBulkEditParticipationType}
       />
 
       <CheckInEventModal

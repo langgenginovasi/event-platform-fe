@@ -4,7 +4,7 @@ import { useState } from "react";
 import useSWR from "swr";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
-import { extractApiError } from "@/lib/utils";
+import { extractApiError } from "@/lib/error";
 
 interface UseTypeCrudConfig {
   endpoint: string;
@@ -22,6 +22,11 @@ export function useTypeCrud({ endpoint, swrKey, entityName }: UseTypeCrudConfig)
   const [slug, setSlug] = useState("");
   const [sortOrder, setSortOrder] = useState(0);
   const [saving, setSaving] = useState(false);
+
+  // ── Delete confirmation (ConfirmationDialog, bukan window.confirm) ──
+  const [deleteItem, setDeleteItem] = useState<any>(null);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const openDialog = (item?: any) => {
     if (item) {
@@ -69,14 +74,24 @@ export function useTypeCrud({ endpoint, swrKey, entityName }: UseTypeCrudConfig)
       return;
     }
 
-    if (!confirm(`Hapus "${item.name}"?`)) return;
+    setDeleteItem(item);
+    setIsDeleteOpen(true);
+  };
 
+  const confirmDelete = async () => {
+    if (!deleteItem) return;
+
+    setIsDeleting(true);
     try {
-      await api.delete(`${endpoint}/${item.id}`);
+      await api.delete(`${endpoint}/${deleteItem.id}`);
       toast.success("Berhasil dihapus");
       mutate();
+      setIsDeleteOpen(false);
+      setDeleteItem(null);
     } catch (error: any) {
       toast.error(extractApiError(error, "Gagal menghapus"));
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -96,5 +111,11 @@ export function useTypeCrud({ endpoint, swrKey, entityName }: UseTypeCrudConfig)
     openDialog,
     handleSave,
     handleDelete,
+    // Delete confirmation state
+    isDeleteOpen,
+    setIsDeleteOpen,
+    isDeleting,
+    deleteItemName: deleteItem?.name,
+    confirmDelete,
   };
 }

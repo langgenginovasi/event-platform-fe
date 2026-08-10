@@ -1,6 +1,6 @@
 "use client";
 
-import { Mail, Trash2 } from "lucide-react";
+import { Mail, Trash2, Tags, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface BulkActionBarProps {
@@ -8,7 +8,9 @@ interface BulkActionBarProps {
   onSendEmail?: () => void;
   onCheckIn?: () => void;
   onCheckOut?: () => void;
+  onEditParticipationType?: () => void;
   onDelete?: () => void;
+  onClearSelection: () => void;
 }
 
 export function BulkActionBar({
@@ -16,7 +18,9 @@ export function BulkActionBar({
   onSendEmail,
   onCheckIn,
   onCheckOut,
+  onEditParticipationType,
   onDelete,
+  onClearSelection,
 }: BulkActionBarProps) {
   if (selectedCount === 0) return null;
 
@@ -26,6 +30,26 @@ export function BulkActionBar({
         {selectedCount} peserta dipilih
       </span>
       <div className="flex gap-2">
+        <Button
+          size="sm"
+          variant="outline"
+          className="text-slate-600 hover:text-slate-700 hover:bg-slate-100 border-slate-200"
+          onClick={onClearSelection}
+        >
+          <X className="w-3.5 h-3.5 mr-1" />
+          Batal Pilih
+        </Button>
+        {onEditParticipationType && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-violet-600 hover:text-violet-700 hover:bg-violet-50 border-violet-200"
+            onClick={onEditParticipationType}
+          >
+            <Tags className="w-3.5 h-3.5 mr-1" />
+            Ubah Tipe Kepesertaan
+          </Button>
+        )}
         {onSendEmail && (
           <Button
             size="sm"

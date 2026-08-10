@@ -16,6 +16,12 @@ export interface EmailJobPollResult {
   failures: { to: string; error?: string }[];
 }
 
+export interface EmailBatchStatus {
+  status: string;
+  stats: { sent: number; failed: number; queued: number; sending: number };
+  total_jobs: number;
+}
+
 const POLL_INTERVAL_MS = 1500;
 const POLL_TIMEOUT_MS = 60000;
 
@@ -67,4 +73,55 @@ export async function pollEmailJobs(
   });
 
   return { sent, failed: failures.length, timedOut, failures };
+}
+
+const BATCH_POLL_INTERVAL_MS = 2000;
+const BATCH_POLL_TIMEOUT_MS = 120000;
+
+export interface EmailBatchPollResult {
+  sent: number;
+  failed: number;
+  timedOut: boolean;
+}
+
+/**
+ * Menunggu email batch selesai dengan polling ke /api/email-batches/:id.
+ * @param batchId ID email batch dari BE.
+ * @param queued Jumlah email yang masuk antrean (untuk progress awal).
+ * @param onProgress Callback (done, total) setiap ada progress.
+ */
+export async function pollEmailBatch(
+  batchId: string,
+  queued: number,
+  onProgress?: (done: number, total: number) => void
+): Promise<EmailBatchPollResult> {
+  const start = Date.now();
+
+  while (true) {
+    if (Date.now() - start > BATCH_POLL_TIMEOUT_MS) {
+      return { sent: 0, failed: 0, timedOut: true };
+    }
+
+    try {
+      const batchRes = await api.get<{ data: EmailBatchStatus }>(`/email-batches/${batchId}`);
+      const batchData = batchRes?.data;
+      if (!batchData) {
+        await new Promise((resolve) => setTimeout(resolve, BATCH_POLL_INTERVAL_MS));
+        continue;
+      }
+
+      const { status, stats, total_jobs } = batchData;
+      const done = (stats.sent ?? 0) + (stats.failed ?? 0);
+      const total = total_jobs ?? queued;
+      onProgress?.(done, total);
+
+      if (status === "completed") {
+        return { sent: stats.sent ?? 0, failed: stats.failed ?? 0, timedOut: false };
+      }
+    } catch {
+      // error transien (mis. jaringan), lanjutkan polling
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, BATCH_POLL_INTERVAL_MS));
+  }
 }

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import useSWR from "swr";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
-import { extractApiError } from "@/lib/utils";
+import { extractApiError } from "@/lib/error";
 import { pollEmailJobs } from "@/lib/emailJobPolling";
 import { useBulkSelection } from "./useBulkSelection";
 import {
@@ -13,6 +13,7 @@ import {
   GET_PARTICIPANTS,
   GET_EVENTS,
   GET_EVENT_GROUP_PARTICIPATION_TYPES,
+  GET_MEMBERSHIP_TYPES,
   UPDATE_REGISTRATION,
 } from "@/lib/api-endpoints";
 
@@ -39,6 +40,8 @@ export function useRegistrationActions(eventGroupId: string) {
   const [currentPage, setCurrentPage] = useState(1);
   const [sortField, setSortField] = useState<string | undefined>();
   const [sortOrder, setSortOrder] = useState<string | undefined>();
+  const [participationTypeFilter, setParticipationTypeFilter] = useState("");
+  const [membershipTypeFilter, setMembershipTypeFilter] = useState("");
 
   // ── Tambah Peserta (checklist/bulk) ────────────────────────────────
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -46,6 +49,7 @@ export function useRegistrationActions(eventGroupId: string) {
   const [addSelectedIds, setAddSelectedIds] = useState<string[]>([]);
   const [isRegistering, setIsRegistering] = useState(false);
   const [addParticipationTypeId, setAddParticipationTypeId] = useState<string>("");
+  const [addMembershipTypeId, setAddMembershipTypeId] = useState("");
 
   // ── STATE UNTUK CHECK-IN EVENT MODAL ───────────────────────────────
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
@@ -66,8 +70,30 @@ export function useRegistrationActions(eventGroupId: string) {
   const [expandedEvents, setExpandedEvents] = useState<Record<string, boolean>>({});
 
   // ── STATE UNTUK BULK SELECTION ────────────────────────────────────
-  const { selectedIds, setSelectedIds, handleSelectAll, handleSelectOne, clearSelection } =
-    useBulkSelection({ deps: [currentPage, keyword] });
+  const { selectedIds, setSelectedIds, handleSelectOne, clearSelection } =
+    useBulkSelection({ deps: [currentPage] });
+
+  const [isSelectingAll, setIsSelectingAll] = useState(false);
+
+  const handleSelectAll = async (items: any[], checked: boolean) => {
+    if (checked) {
+      setIsSelectingAll(true);
+      try {
+        const res = await api.get(
+          GET_REGISTRATIONS(eventGroupId, 1, -1, keyword, sortField, sortOrder, participationTypeFilter, membershipTypeFilter)
+        );
+        const allIds = (res as any).data.map((r: any) => r.id);
+        setSelectedIds(allIds);
+        toast.success(`Berhasil memilih ${allIds.length} registrasi`);
+      } catch (error) {
+        toast.error("Gagal memilih semua data");
+      } finally {
+        setIsSelectingAll(false);
+      }
+    } else {
+      setSelectedIds([]);
+    }
+  };
 
   // ── STATE UNTUK EMAIL MODAL ──────────────────────────────────────
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
@@ -87,6 +113,11 @@ export function useRegistrationActions(eventGroupId: string) {
   const [editingRegId, setEditingRegId] = useState<string | null>(null);
   const [editParticipationValue, setEditParticipationValue] = useState<string>("");
   const [loadingEditId, setLoadingEditId] = useState<string | null>(null);
+
+  // ── STATE UNTUK BULK EDIT PARTICIPATION TYPE ──────────────────
+  const [isBulkEditModalOpen, setIsBulkEditModalOpen] = useState(false);
+  const [bulkParticipationTypeId, setBulkParticipationTypeId] = useState("");
+  const [isBulkUpdating, setIsBulkUpdating] = useState(false);
 
   // Reset accordion when detail modal opens
   useEffect(() => {
@@ -149,7 +180,7 @@ export function useRegistrationActions(eventGroupId: string) {
   const { data, isLoading, mutate } = useSWR<{
     data: RegistrationItem[];
     meta: any;
-  }>(GET_REGISTRATIONS(eventGroupId, currentPage, 10, keyword, sortField, sortOrder));
+  }>(GET_REGISTRATIONS(eventGroupId, currentPage, 10, keyword, sortField, sortOrder, participationTypeFilter, membershipTypeFilter));
 
   // Fetch total events in this event group
   const { data: eventsData } = useSWR<{ data: any[] }>(GET_EVENTS(eventGroupId, 1, 100));
@@ -166,9 +197,13 @@ export function useRegistrationActions(eventGroupId: string) {
     is_active: pt.is_active,
   }));
 
+  // Fetch membership types (global) for filter di tabel & AddParticipantModal
+  const { data: membershipTypesRes } = useSWR<{ data: any[] }>(GET_MEMBERSHIP_TYPES());
+  const membershipTypes = membershipTypesRes?.data || [];
+
   // Fetch unregistered participants for checklist
   const { data: unregisteredData, mutate: mutateUnregistered } = useSWR<{ data: any[]; meta: any }>(
-    isAddModalOpen ? GET_PARTICIPANTS(1, 100, addParticipantSearch, eventGroupId) : null
+    isAddModalOpen ? GET_PARTICIPANTS(1, 100, addParticipantSearch, eventGroupId, addMembershipTypeId) : null
   );
   const unregisteredParticipants = unregisteredData?.data || [];
 
@@ -215,6 +250,7 @@ export function useRegistrationActions(eventGroupId: string) {
   const handleOpenAddModal = () => {
     setAddParticipantSearch("");
     setAddSelectedIds([]);
+    setAddMembershipTypeId("");
     setIsAddModalOpen(true);
   };
 
@@ -244,12 +280,13 @@ export function useRegistrationActions(eventGroupId: string) {
       await api.post("/registrations/bulk", {
         event_group_id: eventGroupId,
         participant_ids: addSelectedIds,
-        participation_type_id: addParticipationTypeId || undefined,
+        participation_type_id: addParticipationTypeId || null,
       });
       toast.success(`${addSelectedIds.length} peserta berhasil didaftarkan`);
       setIsAddModalOpen(false);
       setAddSelectedIds([]);
       setAddParticipationTypeId("");
+      setAddMembershipTypeId("");
       mutate();
       mutateUnregistered();
     } catch (err: any) {
@@ -353,6 +390,29 @@ export function useRegistrationActions(eventGroupId: string) {
     setDeleteTargetId(null);
     setDeleteTargetIds(selectedIds);
     setIsDeleteModalOpen(true);
+  };
+
+  const handleBulkEditParticipationType = async () => {
+    if (selectedIds.length === 0) {
+      toast.warning("Pilih registrasi terlebih dahulu");
+      return;
+    }
+    setIsBulkUpdating(true);
+    try {
+      await api.put("/registrations/bulk-update", {
+        registration_ids: selectedIds,
+        participation_type_id: bulkParticipationTypeId || null,
+      });
+      toast.success(`${selectedIds.length} registrasi berhasil diperbarui`);
+      setIsBulkEditModalOpen(false);
+      setBulkParticipationTypeId("");
+      setSelectedIds([]);
+      mutate();
+    } catch (err: any) {
+      toast.error(extractApiError(err, "Gagal memperbarui tipe kepesertaan"));
+    } finally {
+      setIsBulkUpdating(false);
+    }
   };
 
   const handleBulkSendEmail = async () => {
@@ -478,7 +538,7 @@ export function useRegistrationActions(eventGroupId: string) {
     setLoadingEditId(registrationId);
     try {
       await api.put(`/registrations/${registrationId}`, {
-        participation_type_id: editParticipationValue || undefined,
+        participation_type_id: editParticipationValue || null,
       });
       toast.success("Tipe kepesertaan berhasil diperbarui");
       setEditingRegId(null);
@@ -499,6 +559,10 @@ export function useRegistrationActions(eventGroupId: string) {
     setCurrentPage,
     sortField,
     sortOrder,
+    participationTypeFilter,
+    setParticipationTypeFilter,
+    membershipTypeFilter,
+    setMembershipTypeFilter,
     selectedIds,
     isAddModalOpen,
     setIsAddModalOpen,
@@ -508,6 +572,8 @@ export function useRegistrationActions(eventGroupId: string) {
     isRegistering,
     addParticipationTypeId,
     setAddParticipationTypeId,
+    addMembershipTypeId,
+    setAddMembershipTypeId,
     isEventModalOpen,
     setIsEventModalOpen,
     selectedEventId,
@@ -526,6 +592,7 @@ export function useRegistrationActions(eventGroupId: string) {
     deleteTargetId,
     deleteTargetIds,
     isDeleting,
+    isSelectingAll,
     isEmailModalOpen,
     setIsEmailModalOpen,
     selectedEmailEventId,
@@ -534,10 +601,16 @@ export function useRegistrationActions(eventGroupId: string) {
     emailTargetIds,
     emailType,
     setEmailType,
+    clearSelection,
     editingRegId,
     editParticipationValue,
     setEditParticipationValue,
     loadingEditId,
+    isBulkEditModalOpen,
+    setIsBulkEditModalOpen,
+    bulkParticipationTypeId,
+    setBulkParticipationTypeId,
+    isBulkUpdating,
 
     // Data
     data,
@@ -545,6 +618,7 @@ export function useRegistrationActions(eventGroupId: string) {
     mutate,
     totalEvents,
     participationTypes,
+    membershipTypes,
     unregisteredParticipants,
     allRegistrations,
     allRegistrationsRes,
@@ -570,6 +644,7 @@ export function useRegistrationActions(eventGroupId: string) {
     handleBulkCheckOut,
     executeCheckIn,
     handleBulkDelete,
+    handleBulkEditParticipationType,
     handleBulkSendEmail,
     handleSingleSendEmail,
     handleConfirmSendEmail,

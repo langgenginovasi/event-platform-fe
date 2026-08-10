@@ -1,20 +1,24 @@
 "use client";
 
-import { Plus, Import } from "lucide-react";
+import { Plus, Import, Tags, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface ParticipantBulkActionBarProps {
   selectedCount: number;
   onAddToGroup: () => void;
+  onEditMembershipType?: () => void;
   onDelete?: () => void;
   canDelete?: boolean;
+  onClearSelection: () => void;
 }
 
 export function ParticipantBulkActionBar({
   selectedCount,
   onAddToGroup,
+  onEditMembershipType,
   onDelete,
   canDelete = false,
+  onClearSelection,
 }: ParticipantBulkActionBarProps) {
   if (selectedCount === 0) return null;
 
@@ -24,6 +28,26 @@ export function ParticipantBulkActionBar({
         {selectedCount} peserta dipilih
       </span>
       <div className="flex gap-2">
+        <Button
+          size="sm"
+          variant="outline"
+          className="text-slate-600 hover:text-slate-700 hover:bg-slate-100 border-slate-200"
+          onClick={onClearSelection}
+        >
+          <X className="w-3.5 h-3.5 mr-1" />
+          Batal Pilih
+        </Button>
+        {onEditMembershipType && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-violet-600 hover:text-violet-700 hover:bg-violet-50 border-violet-200"
+            onClick={onEditMembershipType}
+          >
+            <Tags className="w-3.5 h-3.5 mr-1" />
+            Ubah Tipe Keanggotaan
+          </Button>
+        )}
         {canDelete && onDelete && (
           <Button
             size="sm"

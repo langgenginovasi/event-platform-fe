@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import useSWR from "swr";
 import { Mail, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,14 +13,16 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { GET_EVENTS } from "@/lib/api-endpoints";
 
 interface SendEmailModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   targetCount: number;
-  events: any[];
-  selectedEventId: string;
-  onEventChange: (val: string) => void;
+  eventGroupId?: string;
+  events?: any[];
+  selectedEventId?: string;
+  onEventChange?: (val: string) => void;
   isSending: boolean;
   onConfirm: (emailType: "group" | "event", eventId?: string) => void;
 }
@@ -28,17 +31,31 @@ export function SendEmailModal({
   open,
   onOpenChange,
   targetCount,
-  events,
-  selectedEventId,
-  onEventChange,
+  eventGroupId,
+  events: controlledEvents,
+  selectedEventId: controlledSelectedEventId,
+  onEventChange: controlledOnEventChange,
   isSending,
   onConfirm,
 }: SendEmailModalProps) {
   const [emailType, setEmailType] = useState<"group" | "event">("group");
+  const [internalEventId, setInternalEventId] = useState("");
+
+  const standalone = !!eventGroupId;
+
+  // Mode standalone (dari Event Group list): modal fetch events sendiri.
+  const { data: standaloneEventsRes } = useSWR<{ data: any[] }>(
+    standalone && open ? GET_EVENTS(eventGroupId, 1, 100) : null
+  );
+
+  const events = standalone ? standaloneEventsRes?.data || [] : (controlledEvents || []);
+  const selectedEventId = standalone ? internalEventId : (controlledSelectedEventId || "");
+  const onEventChange = standalone ? setInternalEventId : (controlledOnEventChange || (() => {}));
 
   useEffect(() => {
     if (!open) {
       setEmailType("group");
+      setInternalEventId("");
     }
   }, [open]);
 

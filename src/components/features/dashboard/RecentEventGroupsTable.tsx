@@ -3,14 +3,16 @@
 import { useRouter } from "next/navigation";
 import { Calendar, ChevronRight } from "lucide-react";
 import { TableCard } from "@/components/shared/CustomCards";
-import { Table, TableBody, TableRow, TableCell } from "@/components/ui/table";
+import { Table, TableBody, TableRow, TableCell, TableHeader, TableHead } from "@/components/ui/table";
 import { formatDate } from "@/lib/utils";
+import { TableBodyStates } from "@/components/shared/TableBodyStates";
 
 interface RecentEventGroupsTableProps {
   groups: any[];
+  isLoading?: boolean;
 }
 
-export function RecentEventGroupsTable({ groups }: RecentEventGroupsTableProps) {
+export function RecentEventGroupsTable({ groups, isLoading }: RecentEventGroupsTableProps) {
   const router = useRouter();
   const today = new Date();
 
@@ -33,8 +35,21 @@ export function RecentEventGroupsTable({ groups }: RecentEventGroupsTableProps) 
       </div>
 
       <Table>
+        <TableHeader className="sr-only">
+          <TableRow>
+            <TableHead>Grup Event</TableHead>
+            <TableHead className="text-right">Status</TableHead>
+          </TableRow>
+        </TableHeader>
         <TableBody>
-          {groups.map((group: any) => {
+          <TableBodyStates
+            isLoading={!!isLoading}
+            isEmpty={groups.length === 0}
+            colSpan={2}
+            emptyMessage="Belum ada grup event"
+          />
+
+          {!isLoading && groups.map((group: any) => {
             const status =
               new Date(group.start_date) <= today && new Date(group.end_date) >= today
                 ? "Aktif"

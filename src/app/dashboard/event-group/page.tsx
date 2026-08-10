@@ -12,6 +12,7 @@ import { PaginationFooter } from "@/components/shared/PaginationFooter";
 import { useEventGroupPageActions } from "@/hooks/useEventGroupPageActions";
 import { CreateEventGroupModal } from "@/components/features/dashboard/CreateEventGroupModal";
 import { EventGroupTable } from "@/components/features/event-group/EventGroupTable";
+import { SendEmailModal } from "@/components/features/workspace/Registration/SendEmailModal";
 
 export default function EventGroupPage() {
   const { can } = usePermissions();
@@ -79,6 +80,7 @@ export default function EventGroupPage() {
           items={filteredItems}
           isLoading={actions.isLoading}
           onDelete={(id) => actions.openDelete(id)}
+          onEmailClick={(id, count) => actions.handleOpenEmail(id, count)}
         />
 
         <PaginationFooter
@@ -108,6 +110,15 @@ export default function EventGroupPage() {
         variant="danger"
         isLoading={actions.isDeleting}
         onConfirm={actions.confirmDelete}
+      />
+
+      <SendEmailModal
+        open={actions.isEmailModalOpen}
+        onOpenChange={actions.setIsEmailModalOpen}
+        targetCount={actions.emailTargetCount}
+        eventGroupId={actions.emailTargetEventGroupId || undefined}
+        isSending={actions.isSendingEmail}
+        onConfirm={actions.handleConfirmSendEmail}
       />
     </div>
   );

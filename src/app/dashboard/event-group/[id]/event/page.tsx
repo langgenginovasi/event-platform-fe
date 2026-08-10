@@ -4,14 +4,7 @@ import { useState } from "react";
 import { useParams } from "next/navigation";
 import useSWR from "swr";
 import {
-  Search,
   Plus,
-  Import,
-  ChevronLeft,
-  ChevronRight,
-  MoreHorizontal,
-  Eye,
-  Mail,
   Loader2,
   ArrowUpDown,
   Edit3,
@@ -23,8 +16,6 @@ import { cn } from "@/lib/utils";
 import { StatCard } from "@/components/shared/StatCard";
 import { TableToolbar } from "@/components/shared/TableToolbar";
 import { PaginationFooter } from "@/components/shared/PaginationFooter";
-import { Checkbox } from "@/components/ui/checkbox";
-import { CardContent } from "@/components/ui/card";
 import { TableCard } from "@/components/shared/CustomCards";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
@@ -60,6 +51,8 @@ export default function EventPage() {
   const { id } = useParams() as { id: string };
   const [keyword, setKeyword] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [sortField, setSortField] = useState<string | undefined>();
+  const [sortOrder, setSortOrder] = useState<string | undefined>();
   const { can } = usePermissions();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -83,8 +76,21 @@ export default function EventPage() {
 
   // SWR fetch
   const { data, error, isLoading, mutate } = useSWR<{ data: EventItem[]; meta: any }>(
-    GET_EVENTS(id, currentPage, 10, keyword)
+    GET_EVENTS(id, currentPage, 10, keyword, sortField, sortOrder)
   );
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      if (sortOrder === "asc") setSortOrder("desc");
+      else {
+        setSortField(undefined);
+        setSortOrder(undefined);
+      }
+    } else {
+      setSortField(field);
+      setSortOrder("asc");
+    }
+  };
 
   // Fetch event group detail for total registration count
   const { data: groupDetail } = useSWR<{ data: any }>(GET_EVENT_GROUP_DETAIL(id));
@@ -166,17 +172,47 @@ export default function EventPage() {
           <Table>
             <TableHeader className="bg-slate-50">
               <TableRow>
-                <TableHead className="w-12 text-center">
-                  <Checkbox />
+                <TableHead
+                  onClick={() => handleSort("name")}
+                  className="cursor-pointer group"
+                >
+                  <div className="flex items-center">
+                    Nama{" "}
+                    <ArrowUpDown
+                      className={cn(
+                        "ml-2 h-3.5 w-3.5 transition-opacity",
+                        sortField === "name" ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                      )}
+                    />
+                  </div>
                 </TableHead>
-                <TableHead>
-                  <div className="flex items-center cursor-pointer group">Nama <ArrowUpDown className="ml-2 h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" /></div>
+                <TableHead
+                  onClick={() => handleSort("start_datetime")}
+                  className="cursor-pointer group"
+                >
+                  <div className="flex items-center">
+                    Waktu Mulai{" "}
+                    <ArrowUpDown
+                      className={cn(
+                        "ml-2 h-3.5 w-3.5 transition-opacity",
+                        sortField === "start_datetime" ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                      )}
+                    />
+                  </div>
                 </TableHead>
-                <TableHead>
-                  <div className="flex items-center cursor-pointer group">Waktu Mulai <ArrowUpDown className="ml-2 h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" /></div>
-                </TableHead>
-                <TableHead>
-                  <div className="flex items-center cursor-pointer group">Waktu Selesai <ArrowUpDown className="ml-2 h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" /></div>
+                <TableHead
+                  onClick={() => handleSort("end_datetime")}
+                  className="cursor-pointer group"
+                >
+                  <div className="flex items-center">
+                    Waktu Selesai{" "}
+                    <ArrowUpDown
+                      className={cn(
+                        "ml-2 h-3.5 w-3.5 transition-opacity",
+                        sortField === "end_datetime" ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                      )}
+                    />
+                  </div>
                 </TableHead>
                 <TableHead className="text-center">Masuk</TableHead>
                 <TableHead className="text-center">Keluar</TableHead>
@@ -184,14 +220,11 @@ export default function EventPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              <TableBodyStates isLoading={isLoading} isEmpty={data?.data?.length === 0} colSpan={7} emptyMessage="Tidak ada data event" />
+              <TableBodyStates isLoading={isLoading} isEmpty={data?.data?.length === 0} colSpan={6} emptyMessage="Tidak ada data event" />
 
               {!isLoading &&
                 data?.data?.map((event) => (
                   <TableRow key={event.id}>
-                    <TableCell className="text-center">
-                      <Checkbox />
-                    </TableCell>
                     <TableCell className="font-semibold text-foreground">{event.name}</TableCell>
                     <TableCell className="text-muted-foreground">
                       {formatDateTime(event.start_datetime)}

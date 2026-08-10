@@ -68,6 +68,18 @@ export function DetailRegistrationModal({
                     {formatGender(detail.participant?.gender)}
                   </p>
                 </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Tipe Identitas</p>
+                  <p className="font-medium text-foreground">
+                    {detail.participant?.identification_type || "-"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">No. Identitas</p>
+                  <p className="font-medium text-foreground">
+                    {detail.participant?.identification_number || "-"}
+                  </p>
+                </div>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-4 items-start">

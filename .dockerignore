@@ -1,0 +1,7 @@
+node_modules
+.next
+.env
+.git
+*.md
+docs/
+sample-email-template.html
