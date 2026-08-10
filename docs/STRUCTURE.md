@@ -2,6 +2,8 @@
 
 Dokumen aturan struktur folder, naming conventions, dan coding patterns untuk `event-platform-fe`.
 
+> **Terakhir disinkronkan:** 9 August 2026 — semua halaman utama sudah pakai SWR, halaman inline sudah diextract (session, users, settings, scan), filter tabel (participation/membership type) sudah terpasang di registration & participant, dan `window.confirm()` sudah diganti `ConfirmationDialog` (via `useDeleteConfirmation`).
+
 ---
 
 ## 1. Folder Structure
@@ -14,6 +16,7 @@ event-platform-fe/
 │   │   ├── layout.tsx             # Root layout (Server Component)
 │   │   ├── page.tsx               # Login page
 │   │   ├── globals.css            # Global styles
+│   │   ├── design-system/         # Component showcase (dev only)
 │   │   │
 │   │   ├── api/auth/[...nextauth]/
 │   │   │   └── route.ts           # NextAuth handler
@@ -22,10 +25,29 @@ event-platform-fe/
 │   │       ├── layout.tsx         # Dashboard shell (sidebar + navbar)
 │   │       ├── template.tsx       # Page transitions
 │   │       ├── page.tsx           # Dashboard home
-│   │       └── {feature}/
-│   │           └── page.tsx       # Feature page
+│   │       ├── email-log/         # Email queue log (batches + stats)
+│   │       ├── users/             # User management (SUPER_ADMIN)
+│   │       ├── participant/       # Master participant list
+│   │       ├── settings/
+│   │       │   ├── page.tsx               # Account settings
+│   │       │   ├── membership-types/      # Membership type CRUD
+│   │       │   └── participation-types/   # Participation type CRUD
+│   │       ├── event-group/
+│   │       │   ├── page.tsx       # Event group list
+│   │       │   └── [id]/
+│   │       │       ├── page.tsx               # Workspace overview
+│   │       │       ├── event/page.tsx         # Sub-event management
+│   │       │       ├── registration/page.tsx  # Registration management
+│   │       │       ├── participation-types/page.tsx  # Assign types
+│   │       │       ├── scan/page.tsx          # QR scanner
+│   │       │       ├── session/page.tsx       # Session management
+│   │       │       ├── export/page.tsx        # Excel export
+│   │       │       └── email-log/page.tsx     # Email log per event group
+│   │       └── testing/           # Halaman percobaan (jangan dipakai production)
 │   │
 │   ├── components/
+│   │   ├── AuthProvider.tsx       # NextAuth session provider
+│   │   ├── SWRProvider.tsx        # SWR global fetcher + config
 │   │   ├── ui/                    # Layer 1: shadcn/ui primitives
 │   │   ├── shared/                # Layer 2: App-wide reusable components
 │   │   └── features/              # Layer 3: Domain-specific components
@@ -35,6 +57,54 @@ event-platform-fe/
 │   ├── lib/                       # Utilities, API client, helpers
 │   └── types/                     # TypeScript type definitions
 ```
+
+### Folder `components/features/` aktual
+
+```
+components/features/
+├── dashboard/            # Dashboard home & event group list
+│   ├── CreateEventGroupModal.tsx
+│   ├── DashboardSidebar.tsx
+│   └── RecentEventGroupsTable.tsx
+├── event-group/          # Event group list
+│   └── EventGroupTable.tsx
+├── event-group-detail/   # Workspace overview
+│   ├── WorkspaceSummaryCards.tsx
+│   ├── WorkspaceChart.tsx
+│   ├── WorkspaceQuickActions.tsx
+│   ├── EmailSettingsCard.tsx
+│   ├── TestEmailCard.tsx
+│   └── EmailPreviewCard.tsx
+├── workspace/
+│   ├── Registration/     # Registration management
+│   │   ├── AddParticipantModal.tsx
+│   │   ├── BulkActionBar.tsx
+│   │   ├── CheckInEventModal.tsx
+│   │   ├── DetailRegistrationModal.tsx
+│   │   ├── InlineSaveCancelButtons.tsx
+│   │   └── SendEmailModal.tsx
+│   ├── Scan/             # QR Scanner (diextract dari scan/page.tsx)
+│   │   ├── QRScanner.tsx
+│   │   └── ScanStatusOverlay.tsx
+│   └── SessionFormModal.tsx   # Session management
+├── participant/          # Master participant
+│   ├── CreateParticipantModal.tsx
+│   ├── EditParticipantModal.tsx
+│   ├── DetailParticipantModal.tsx
+│   ├── ImportExcelModal.tsx
+│   ├── AddToEventGroupModal.tsx
+│   └── ParticipantBulkActionBar.tsx
+├── email-log/            # Email queue log
+│   ├── EmailLogSummary.tsx
+│   └── EmailBatchCompactCard.tsx
+├── settings/             # Tab panels settings (diextract dari settings/page.tsx)
+│   ├── AccountTab.tsx
+│   └── AppPreferencesTab.tsx
+├── users/                # User management
+│   └── AddUserModal.tsx
+```
+
+> **Catatan:** Halaman `users/`, `settings/`, `session/`, `scan/` sudah diextract ke komponen di atas. Halaman `event-group/[id]/event/` dan `export/` masih menyimpan tabel/modal inline (sudah pakai SWR + `TableBodyStates`), belum dipecah lebih lanjut.
 
 ---
 
@@ -84,55 +154,53 @@ components/
 | Ada table dengan复杂 logic | Wajib extract table component |
 | Ada business logic yang bisa reusable | Extract ke custom hook |
 
-### Folder Structure Target
+### Folder Structure Target (aktual)
 
 ```
 components/features/
 ├── dashboard/
-│   ├── DashboardStats.tsx
-│   ├── RecentEventGroups.tsx
-│   └── CreateEventGroupModal.tsx
+│   ├── CreateEventGroupModal.tsx
+│   ├── DashboardSidebar.tsx
+│   └── RecentEventGroupsTable.tsx
 │
 ├── event-group/
-│   ├── EventGroupTable.tsx
-│   └── CreateEventGroupModal.tsx
+│   └── EventGroupTable.tsx
+│
+├── event-group-detail/        # Workspace overview
+│   ├── WorkspaceSummaryCards.tsx
+│   ├── WorkspaceChart.tsx
+│   ├── WorkspaceQuickActions.tsx
+│   ├── EmailSettingsCard.tsx
+│   ├── TestEmailCard.tsx
+│   └── EmailPreviewCard.tsx
 │
 ├── workspace/
-│   ├── Overview/
-│   │   ├── SummaryCards.tsx
-│   │   ├── ChartSection.tsx
-│   │   └── EmailSettings.tsx
-│   │
-│   ├── Registration/
-│   │   ├── AddParticipantModal.tsx
-│   │   ├── BulkActionBar.tsx
-│   │   ├── CheckInEventModal.tsx
-│   │   ├── DetailRegistrationModal.tsx
-│   │   └── SendEmailModal.tsx
-│   │
-│   ├── Event/
-│   │   ├── EventTable.tsx
-│   │   └── EventFormModal.tsx
-│   │
-│   └── Scan/
-│       └── QRScanner.tsx
+│   └── Registration/
+│       ├── AddParticipantModal.tsx
+│       ├── BulkActionBar.tsx
+│       ├── CheckInEventModal.tsx
+│       ├── DetailRegistrationModal.tsx
+│       ├── InlineSaveCancelButtons.tsx
+│       └── SendEmailModal.tsx
 │
 ├── participant/
-│   ├── ParticipantTable.tsx
-│   ├── BulkActionBar.tsx
 │   ├── CreateParticipantModal.tsx
+│   ├── EditParticipantModal.tsx
+│   ├── DetailParticipantModal.tsx
 │   ├── ImportExcelModal.tsx
-│   └── DetailParticipantModal.tsx
+│   ├── AddToEventGroupModal.tsx
+│   └── ParticipantBulkActionBar.tsx
 │
-├── users/
-│   ├── UserTable.tsx
-│   └── CreateUserModal.tsx
+├── email-log/
+│   ├── EmailLogSummary.tsx
+│   └── EmailBatchCompactCard.tsx
 │
-└── settings/
-    ├── AccountSettings.tsx
-    ├── MembershipTypeTable.tsx
-    └── ParticipationTypeTable.tsx
+├── users/                    # AddUserModal.tsx — sudah diextract
+│
+└── settings/                 # AccountTab.tsx, AppPreferencesTab.tsx — sudah diextract
 ```
+
+> **Target refactor (belum dilakukan):** halaman `event-group/[id]/event/` dan `export/` masih memuat tabel/modal inline. Saat refactor, extract ke folder `features/{feature}/` sesuai pola di atas.
 
 ---
 
@@ -267,6 +335,7 @@ import { ConfirmationDialog } from "@/components/shared/ConfirmationDialog";
   title="Hapus Data"
   description="Apakah Anda yakin? Tindakan ini tidak dapat dibatalkan."
   confirmText="Hapus"
+  cancelText="Batal"
   variant="danger"
   isLoading={isDeleting}
   onConfirm={handleConfirmDelete}
@@ -282,9 +351,10 @@ await api.delete(`/items/${id}`);
 | Rule | Keterangan |
 |------|-----------|
 | **Gunakan `<ConfirmationDialog>`** | Bukan `window.confirm()` |
-| **variant wajib** | `"danger"`, `"warning"`, atau `"default"` |
+| **variant** | `"danger"` (default), `"warning"`, atau `"default"` |
 | **isLoading wajib** | Untuk disable button saat proses |
 | **description harus jelas** | Jelaskan konsekuensi tindakan |
+| **Props aktual** | `open`, `onOpenChange`, `title`, `description`, `confirmText` (default "Hapus"), `cancelText` (default "Batal"), `variant`, `isLoading`, `onConfirm` |
 
 ---
 
@@ -517,7 +587,11 @@ import { formatDate } from "@/lib/utils";
 | Inline `style={{ color: "var(--brand-primary)" }}` | Tidak Tailwind-friendly | `[var(--brand-primary)]` |
 | `console.log` di production | Tidak ada di codebase | Hapus atau gunakan DevTools |
 | Barrel exports (`index.ts`) | Tidak dipakai di project ini | Import langsung ke file |
-| axios | Tidak dipakai (sudah ada `lib/api.ts`) | Hapus dari package.json |
+| Import langsung dari `axios` | HTTP client aktual adalah `src/lib/api.ts` (fetch wrapper) | Pakai `api` dari `@/lib/api` |
+
+> **Catatan:** `axios` masih ada di `package.json` sebagai dependency (dipakai `@hono/node-server` dan `@modelcontextprotocol/sdk` secara transitive), tapi **tidak ada import axios langsung di `src/`**. Jangan menambah import axios baru.
+
+> **Catatan data fetching:** Semua halaman utama sudah memakai SWR (termasuk `users/page.tsx`, `settings/page.tsx`, `session/page.tsx`). Sisa penggunaan `useEffect` + `api.get` hanya ada di `scan/page.tsx` (untuk side-effect non-fetch) dan halaman dev (`testing/`, `dev-tools/`).
 
 ---
 
