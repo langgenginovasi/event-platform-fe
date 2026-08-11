@@ -1,6 +1,15 @@
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
+
+console.log(
+  "[RUNTIME ENV] NEXT_PUBLIC_API_URL =",
+  process.env.NEXT_PUBLIC_API_URL ?? "❌ UNDEFINED (fallback dipakai)",
+  "| API_URL dipakai =",
+  API_URL
+);
+
 const handler = NextAuth({
   providers: [
     CredentialsProvider({
@@ -14,7 +23,7 @@ const handler = NextAuth({
 
         try {
           const res = await fetch(
-            `${process.env.NEXT_PUBLIC_API_URL}/auth/login`,
+            `${API_URL}/auth/login`,
             {
               method: "POST",
               headers: {
