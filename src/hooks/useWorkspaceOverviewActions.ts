@@ -50,6 +50,25 @@ export function useWorkspaceOverviewActions(eventGroupId: string) {
     return ev?.name || eventGroup?.name || "Nama Event Group";
   })();
 
+  // ── Rename Event Group ────────────────────────────────────────────
+  const [isEditNameModalOpen, setIsEditNameModalOpen] = useState(false);
+  const [isSavingName, setIsSavingName] = useState(false);
+
+  const handleRenameEventGroup = async (name: string) => {
+    setIsSavingName(true);
+    try {
+      await api.put(`/event-groups/${eventGroupId}`, { name });
+      await mutate();
+      toast.success("Nama grup event berhasil diubah");
+      setIsEditNameModalOpen(false);
+    } catch (error: any) {
+      const message = extractApiError(error, "Gagal mengubah nama grup event");
+      toast.error(message);
+    } finally {
+      setIsSavingName(false);
+    }
+  };
+
   const handleSaveEmailSettings = async () => {
     setIsSavingEmail(true);
     try {
@@ -101,6 +120,12 @@ export function useWorkspaceOverviewActions(eventGroupId: string) {
     totalRegistrations,
     totalAttendances,
     chartData,
+
+    // Rename
+    isEditNameModalOpen,
+    setIsEditNameModalOpen,
+    isSavingName,
+    handleRenameEventGroup,
 
     // Email
     emailSubject,
