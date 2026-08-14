@@ -112,11 +112,11 @@ export default function RegistrationPage() {
                   ? reg.participationTypes.find(
                       (pt: any) => String(pt.id) === reg.participationTypeFilter
                     )?.name
-                  : "Semua Tipe Kepesertaan"}
+                  : "Semua Status Kepesertaan"}
               </span>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Semua Tipe Kepesertaan</SelectItem>
+              <SelectItem value="">Semua Status Kepesertaan</SelectItem>
               {reg.participationTypes.map((pt: any) => (
                 <SelectItem key={pt.id} value={String(pt.id)}>
                   {pt.name}
@@ -235,7 +235,7 @@ export default function RegistrationPage() {
                   </div>
                 </TableHead>
                 <TableHead>
-                  <div className="flex items-center text-muted-foreground">Tipe Kepesertaan</div>
+                  <div className="flex items-center text-muted-foreground">Status Kepesertaan</div>
                 </TableHead>
                 <TableHead>
                   <div className="flex items-center text-muted-foreground">Kehadiran</div>
@@ -323,7 +323,7 @@ export default function RegistrationPage() {
                         ) : (
                           <div className="flex items-center gap-1.5">
                             <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-sm text-foreground">
-                              {r.participation_type?.name || (
+                              {r.participation_status?.name || (
                                 <span className="text-muted-foreground italic">-</span>
                               )}
                             </span>
@@ -333,7 +333,7 @@ export default function RegistrationPage() {
                                 size="sm"
                                 className="h-6 w-6 p-0 shrink-0 text-slate-600"
                                 onClick={() => reg.handleStartInlineEdit(r)}
-                                title="Ubah tipe kepesertaan"
+                                title="Ubah status kepesertaan"
                               >
                                 <Pencil className="w-3 h-3" />
                               </Button>

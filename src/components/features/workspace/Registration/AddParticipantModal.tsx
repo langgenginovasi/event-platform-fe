@@ -65,7 +65,7 @@ export function AddParticipantModal({
         <DialogBody className="space-y-4">
           {participationTypes.length > 0 && (
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Tipe Partisipasi</label>
+              <label className="text-sm font-medium text-foreground">Status Kepesertaan</label>
               <Select
                 items={[
                   { value: "", label: "-- Tidak Ditentukan --" },
@@ -80,7 +80,7 @@ export function AddParticipantModal({
                 onValueChange={(v) => onParticipationTypeChange(v as string)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="-- Pilih Tipe Partisipasi --" />
+                  <SelectValue placeholder="-- Pilih Status Kepesertaan --" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">-- Tidak Ditentukan --</SelectItem>

@@ -23,7 +23,7 @@ export function toAttendanceExportRow(att: any): Record<string, string> {
     "Email": att.registration?.participant?.email || "-",
     "Perusahaan": att.registration?.participant?.company || "-",
     "Jenis Kelamin": formatGender(att.registration?.participant?.gender),
-    "Tipe Kepesertaan": att.registration?.participation_type?.name || "-",
+    "Tipe Kepesertaan": att.registration?.participation_status?.name || "-",
     "Tipe": att.type === "checkin" ? "Masuk" : "Keluar",
     "Tanggal": formatDate(att.scanned_at),
     "Jam": formatTime(att.scanned_at),

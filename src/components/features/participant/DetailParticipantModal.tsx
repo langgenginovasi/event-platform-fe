@@ -108,9 +108,9 @@ export function DetailParticipantModal({
                                 </span>
                               </div>
                               <div className="flex items-center gap-2 mt-0.5">
-                                {reg.participation_type && (
+                                {reg.participation_status && (
                                   <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-violet-50 text-violet-700 border border-violet-200">
-                                    {reg.participation_type.name}
+                                    {reg.participation_status.name}
                                   </span>
                                 )}
                                 <p className="text-xs text-muted-foreground">
