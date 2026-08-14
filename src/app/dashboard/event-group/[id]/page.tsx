@@ -72,6 +72,12 @@ export default function WorkspaceOverviewPage() {
               onSubjectChange={actions.setEmailSubject}
               emailBody={actions.emailBody}
               onBodyChange={actions.setEmailBody}
+              showQr={actions.showQr}
+              onShowQrChange={actions.setShowQr}
+              showParticipantInfo={actions.showParticipantInfo}
+              onShowParticipantInfoChange={actions.setShowParticipantInfo}
+              showAgenda={actions.showAgenda}
+              onShowAgendaChange={actions.setShowAgenda}
               onSave={actions.handleSaveEmailSettings}
               isSaving={actions.isSavingEmail}
             />
@@ -91,7 +97,11 @@ export default function WorkspaceOverviewPage() {
             <EmailPreviewCard
               emailSubject={actions.emailSubject}
               emailBody={actions.emailBody}
-              selectedEventName={actions.selectedEventName}
+              eventGroupName={actions.eventGroup?.name ?? ""}
+              events={actions.eventGroup?.events ?? []}
+              showQr={actions.showQr}
+              showParticipantInfo={actions.showParticipantInfo}
+              showAgenda={actions.showAgenda}
             />
           </div>
         </>
