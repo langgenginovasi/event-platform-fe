@@ -29,46 +29,26 @@ export function useWorkspaceOverviewActions(eventGroupId: string) {
   // ── Email State ─────────────────────────────────────────────────
   const [emailSubject, setEmailSubject] = useState("Tiket Anda untuk {{event_group_name}}");
   const [emailBody, setEmailBody] = useState(
-    "Terima kasih telah mendaftar untuk event **{{event_name}}** dalam **{{event_group_name}}**. Berikut adalah detail event yang akan Anda ikuti:",
+    "Terima kasih telah mendaftar untuk event {{event_name}} dalam {{event_group_name}}. Berikut adalah detail event yang akan Anda ikuti:",
   );
   const [isSavingEmail, setIsSavingEmail] = useState(false);
-  const [showQr, setShowQr] = useState(true);
-  const [showParticipantInfo, setShowParticipantInfo] = useState(true);
-  const [showAgenda, setShowAgenda] = useState(true);
   const [testEmail, setTestEmail] = useState("");
   const [isSendingTest, setIsSendingTest] = useState(false);
-  const [testTemplate, setTestTemplate] = useState<"test" | "group" | "event">("test");
+  const [testTemplate, setTestTemplate] = useState<"test" | "ticket">("test");
   const [selectedEventId, setSelectedEventId] = useState("");
 
   // Initialize email settings from event group data
   useEffect(() => {
     if (eventGroup) {
       setEmailSubject(eventGroup.email_subject || "Tiket Anda untuk {{event_group_name}}");
-      setEmailBody(eventGroup.email_body || "Terima kasih telah mendaftar untuk event **{{event_name}}** dalam **{{event_group_name}}**. Berikut adalah detail event yang akan Anda ikuti:");
-      setShowQr(eventGroup.show_qr ?? true);
-      setShowParticipantInfo(eventGroup.show_participant_info ?? true);
-      setShowAgenda(eventGroup.show_agenda ?? true);
+      setEmailBody(eventGroup.email_body || "Terima kasih telah mendaftar untuk event {{event_name}} dalam {{event_group_name}}. Berikut adalah detail event yang akan Anda ikuti:");
     }
   }, [eventGroup]);
 
-  // ── Rename Event Group ────────────────────────────────────────────
-  const [isEditNameModalOpen, setIsEditNameModalOpen] = useState(false);
-  const [isSavingName, setIsSavingName] = useState(false);
-
-  const handleRenameEventGroup = async (name: string) => {
-    setIsSavingName(true);
-    try {
-      await api.put(`/event-groups/${eventGroupId}`, { name });
-      await mutate();
-      toast.success("Nama grup event berhasil diubah");
-      setIsEditNameModalOpen(false);
-    } catch (error: any) {
-      const message = extractApiError(error, "Gagal mengubah nama grup event");
-      toast.error(message);
-    } finally {
-      setIsSavingName(false);
-    }
-  };
+  const selectedEventName = (() => {
+    const ev = eventGroup?.events?.find((e: any) => e.id === selectedEventId);
+    return ev?.name || eventGroup?.name || "Nama Event Group";
+  })();
 
   const handleSaveEmailSettings = async () => {
     setIsSavingEmail(true);
@@ -76,9 +56,6 @@ export function useWorkspaceOverviewActions(eventGroupId: string) {
       await api.put(`/event-groups/${eventGroupId}`, {
         email_subject: emailSubject || null,
         email_body: emailBody || null,
-        show_qr: showQr,
-        show_participant_info: showParticipantInfo,
-        show_agenda: showAgenda,
       });
       await mutate();
       toast.success("Pengaturan email berhasil disimpan");
@@ -100,14 +77,13 @@ export function useWorkspaceOverviewActions(eventGroupId: string) {
     try {
       await api.post("/test/email", {
         to: testEmail,
+        subject: testTemplate === "ticket" ? `Tiket Anda untuk ${selectedEventName}` : `[Test] ${emailSubject}`,
         template: testTemplate,
-        event_group_id: eventGroupId,
-        event_id: testTemplate === "event" ? selectedEventId : undefined,
+        event_name: selectedEventName,
         participant_name: "Peserta Demo",
+        body: testTemplate === "ticket" ? emailBody : undefined,
       });
       // Email masuk antrean, worker akan mengirimnya di background
-      // Subject & body diambil langsung dari DB (email_subject / email_body + flags),
-      // persis seperti pengiriman asli — pastikan pengaturan sudah disimpan dulu.
       toast.success(`Email test berhasil dimasukkan ke antrean. Cek kotak masuk ${testEmail} dalam beberapa detik.`);
       setTestEmail("");
     } catch (error: any) {
@@ -126,23 +102,11 @@ export function useWorkspaceOverviewActions(eventGroupId: string) {
     totalAttendances,
     chartData,
 
-    // Rename
-    isEditNameModalOpen,
-    setIsEditNameModalOpen,
-    isSavingName,
-    handleRenameEventGroup,
-
     // Email
     emailSubject,
     setEmailSubject,
     emailBody,
     setEmailBody,
-    showQr,
-    setShowQr,
-    showParticipantInfo,
-    setShowParticipantInfo,
-    showAgenda,
-    setShowAgenda,
     isSavingEmail,
     handleSaveEmailSettings,
     testEmail,
@@ -152,6 +116,7 @@ export function useWorkspaceOverviewActions(eventGroupId: string) {
     setTestTemplate,
     selectedEventId,
     setSelectedEventId,
+    selectedEventName,
     handleTestEmail,
   };
 }
