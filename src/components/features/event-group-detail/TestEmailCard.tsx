@@ -6,12 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ContentCard, ContentCardHeader, ContentCardBody } from "@/components/shared/CustomCards";
 
-export type TestEmailTemplate = "test" | "group" | "event";
-
 interface TestEmailCardProps {
   eventGroup: any;
-  testTemplate: TestEmailTemplate;
-  onTemplateChange: (v: TestEmailTemplate) => void;
+  testTemplate: "test" | "ticket";
+  onTemplateChange: (v: "test" | "ticket") => void;
   selectedEventId: string;
   onEventChange: (v: string) => void;
   testEmail: string;
@@ -36,32 +34,30 @@ export function TestEmailCard({
       <ContentCardHeader icon={Mail} title="Uji Email" />
       <ContentCardBody className="space-y-4">
         <p className="text-sm text-gray-600">
-          Kirim email test untuk memastikan konfigurasi SMTP dan template berfungsi.
+          Kirim email test untuk memastikan konfigurasi SMTP berfungsi.
         </p>
 
         <div className="space-y-2">
           <label className="text-sm font-medium text-gray-700">Templat</label>
           <Select
             items={[
-              { value: "test", label: "Uji SMTP (Email Biasa)" },
-              { value: "group", label: "Per Event Group (Tiket)" },
-              { value: "event", label: "Per Event (Tiket)" },
+              { value: "test", label: "Templat Uji (Cek SMTP)" },
+              { value: "ticket", label: "Templat Tiket (dengan QR Code)" },
             ]}
             value={testTemplate}
-            onValueChange={(v) => onTemplateChange(v as TestEmailTemplate)}
+            onValueChange={(v) => onTemplateChange(v as "test" | "ticket")}
           >
             <SelectTrigger>
               <SelectValue placeholder="Pilih Templat" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="test">Uji SMTP (Email Biasa)</SelectItem>
-              <SelectItem value="group">Per Event Group (Tiket)</SelectItem>
-              <SelectItem value="event">Per Event (Tiket)</SelectItem>
+              <SelectItem value="test">Templat Uji (Cek SMTP)</SelectItem>
+              <SelectItem value="ticket">Templat Tiket (dengan QR Code)</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
-        {testTemplate === "event" && eventGroup?.events?.length > 0 && (
+        {testTemplate === "ticket" && eventGroup?.events?.length > 0 && (
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700">Pilih Event</label>
             <Select
@@ -70,7 +66,7 @@ export function TestEmailCard({
               onValueChange={(v) => onEventChange(v as string)}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Pilih Event" />
+                <SelectValue placeholder={`Gunakan nama grup: ${eventGroup?.name || "-"}`} />
               </SelectTrigger>
               <SelectContent>
                 {eventGroup.events.map((ev: any) => (
@@ -78,6 +74,9 @@ export function TestEmailCard({
                 ))}
               </SelectContent>
             </Select>
+            <p className="text-xs text-gray-400">
+              {selectedEventId ? ">Nama event akan digunakan di subject email" : "Kosongkan untuk menggunakan nama event group"}
+            </p>
           </div>
         )}
 
