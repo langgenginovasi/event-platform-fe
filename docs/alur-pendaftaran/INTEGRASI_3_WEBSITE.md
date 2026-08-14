@@ -407,3 +407,1104 @@ Aturan:
 | Review dari Tim | ⏳ Menunggu |
 | Approval | ⏳ Menunggu |
 | Implementasi | ⏳ Belum Mulai |
+
+---
+
+# Brainstorming: Alur Status Kepesertaan & Anggota
+
+**Date:** 15 August 2026  
+**Status:** Brainstorming — Menunggu Keputusan PM  
+**Context:** Analisis kelengkapan alur status anggota dan kepesertaan dari awal sampai akhir
+
+---
+
+## Daftar Isi — Brainstorming
+
+1. [Kondisi Saat Ini](#kondisi-saat-ini)
+2. [Gap Analysis](#gap-analysis)
+3. [Target State (Alur yang Diharapkan)](#target-state)
+4. [Diagram Alur Status](#diagram-alur-status)
+5. [Validasi 1 e-KTA = 1 Registrasi](#validasi-1-ekta--1-registrasi)
+6. [Rekomendasi Update](#rekomendasi-update)
+7. [Decision Points untuk PM](#decision-points-untuk-pm)
+
+---
+
+## Kondisi Saat Ini
+
+### Status Anggota (Membership)
+
+```mermaid
+graph LR
+    A[hipmigo] -->|manual CSV import| B[absensi.hipmibdg.or.id]
+    
+    style A fill:#4CAF50,color:#fff
+    style B fill:#2196F3,color:#fff
+```
+
+| Aspek | Kondisi | Keterangan |
+|-------|---------|------------|
+| Membership types | 3 tipe | Anggota Tetap, Biasa, Luar Biasa |
+| Field di Participant | `membership_type_id` | Nullable, bisa null |
+| Status active/inactive | **TIDAK ADA** | Participant hanya ada atau tidak ada |
+| Sync hipmigo → absensi | **Manual** | Export CSV lalu import manual |
+| Perubahan membership | Bisa diubah admin | Via inline edit atau bulk update |
+
+### Status Kepesertaan (Participation)
+
+```mermaid
+graph LR
+    A[Registrasi] -->|status: REGISTERED| B[Selesai]
+    
+    style A fill:#FF9800,color:#fff
+    style B fill:#4CAF50,color:#fff
+```
+
+| Aspek | Kondisi | Keterangan |
+|-------|---------|------------|
+| Participation types | 5 seeded + 3 planned | Peserta Tetap, Peninjau, Undangan, VIP, Reguler + (Peserta Utusan, Undangan Resmi, Calon Undangan) |
+| Registration status | `"REGISTERED"` saja | Hanya 1 status, tidak ada transisi |
+| DPS → DPT | **TIDAK ADA** | Semua registrasi langsung muncul di DPS |
+| Approval workflow | **TIDAK ADA** | Registrasi langsung aktif |
+| Validasi e-KTA | **TIDAK ADA** | 1 e-KTA bisa daftar berkali-kali |
+
+---
+
+## Gap Analysis
+
+### Gap 1: Tidak Ada Status Anggota (Active/Inactive)
+
+**Kondisi:** Participant tidak punya field `status`. Data hanya ada atau tidak ada.
+
+**Dampak:**
+- Tidak bisa menandai anggota yang sudah tidak aktif
+- Tidak bisa membatasi anggota non-aktif untuk mendaftar event
+- Data anggota dari hipmigo tidak bisa di-sync status aktif/inaktifnya
+
+**Yang perlu ditambah:**
+- Field `status` di Participant model: `"ACTIVE" | "INACTIVE" | "SUSPENDED"`
+- Default `"ACTIVE"` saat create
+- hipmigo bisa set status saat data anggota berubah
+- Absensi harus pull status terbaru dari hipmigo
+
+### Gap 2: Tidak Ada Transisi DPS → DPT
+
+**Kondisi:** Semua registrasi langsung masuk DPS. Tidak ada proses verifikasi/approval menjadi DPT.
+
+**Dampak:**
+- Tidak ada tahap verifikasi sebelum peserta dianggap resmi
+- Semua yang daftar otomatis jadi pemilih tanpa validasi
+- Tidak ada mekanisme reject/batalkan registrasi
+
+**Yang perlu ditambah:**
+- Status di Registration: `"PENDING" | "APPROVED" | "REJECTED" | "REGISTERED" | "CANCELLED"`
+- Alur: `PENDING (DPS) → APPROVED (DPT) → REGISTERED (Aktif)`
+- Admin bisa approve/reject registrasi
+- DPS hanya menampilkan status `PENDING`
+- DPT menampilkan status `APPROVED`
+
+### Gap 3: Tidak Ada Validasi 1 e-KTA = 1 Registrasi
+
+**Kondisi:** `identification_number` tidak punya unique constraint. Dua participant berbeda bisa punya e-KTA yang sama.
+
+**Dampak:**
+- Satu orang bisa mendaftar berkali-kali ke event yang sama
+- Data DPS tidak akurat (duplikasi)
+- Untuk MUSCAB: pelanggaran aturan 1 e-KTA = 1 suara
+
+**Yang perlu ditambah:**
+- Validasi di backend sebelum create registrasi
+- Cek apakah sudah ada participant lain dengan `identification_number` sama yang sudah terdaftar di event group yang sama
+- Error message: "e-KTA [nomor] sudah terdaftar di event group ini"
+
+### Gap 4: Auto Role Mapping Belum Diimplementasi
+
+**Kondisi:** Documentation bilang mapping ada, tapi kode belum ada.
+
+**Dampak:**
+- Admin harus manual assign participation type untuk setiap peserta
+- Rentan kesalahan input
+- Tidak konsisten
+
+**Mapping yang direncanakan:**
+- `anggota-luar-biasa → undangan`
+- `anggota-biasa → peserta-utusan`
+- `calon-undangan → undangan-resmi`
+
+### Gap 5: Data Sync hipmigo → Absensi Masih Manual
+
+**Kondisi:** Export CSV dari hipmigo, lalu import manual ke absensi.
+
+**Dampak:**
+- Data bisa outdated (perubahan di hipmigo belum tentu di-absensi)
+- Butuh effort manual untuk sync
+- Resiko human error saat import
+
+### Gap 6: 6 Public Endpoint Baru Belum Dibuat
+
+**Kondisi:** Documentation sudah spesifikasi tapi belum diimplementasi.
+
+**Endpoint yang perlu ditambah:**
+1. `GET /event-groups/:id` — Detail event group
+2. `GET /event-groups/:id/events` — Event + sesi
+3. `GET /event-groups/:id/attendance` — Statistik kehadiran
+4. `GET /event-groups/:id/registrations` — Daftar peserta
+5. `GET /participant/:id/attendance` — Kehadiran per anggota
+6. `GET /analytics/summary` — Statistik agregat
+
+---
+
+## Target State
+
+### Alur Lengkap Status Anggota
+
+```mermaid
+graph TD
+    A[hipmigo] -->|push/update data| B[absensi.hipmibdg.or.id]
+    B -->|pull status| C{Status Anggota}
+    C -->|ACTIVE| D[Bisa Daftar Event]
+    C -->|INACTIVE| E[Tidak Bisa Daftar]
+    C -->|SUSPENDED| F[Sementara Non-Aktif]
+    
+    style A fill:#4CAF50,color:#fff
+    style B fill:#2196F3,color:#fff
+    style C fill:#FF9800,color:#fff
+    style D fill:#4CAF50,color:#fff
+    style E fill:#f44336,color:#fff
+    style F fill:#FF9800,color:#fff
+```
+
+| Field | Tipe | Nilai | Default | Keterangan |
+|-------|------|-------|---------|------------|
+| `status` | Enum | `ACTIVE`, `INACTIVE`, `SUSPENDED` | `ACTIVE` | Status keanggotaan |
+| `status_updated_at` | DateTime | — | `created_at` | Kapan status terakhir diubah |
+| `status_updated_by` | String | — | `null` | Siapa yang ubah status |
+
+### Alur Lengkap Status Kepesertaan (DPS → DPT)
+
+```mermaid
+stateDiagram-v2
+    [*] --> PENDING: Registrasi Dibuat
+    PENDING --> APPROVED: Admin Setujui (DPT)
+    PENDING --> REJECTED: Admin Tolak
+    PENDING --> CANCELLED: Dibatalkan
+    APPROVED --> REGISTERED: Check-in Pertama
+    APPROVED --> CANCELLED: Dibatalkan
+    REGISTERED --> CANCELLED: Dibatalkan
+    REJECTED --> [*]
+    CANCELLED --> [*]
+    
+    note right of PENDING: Muncul di DPS
+    note right of APPROVED: Muncul di DPT
+    note right of REGISTERED: QR Code Aktif
+```
+
+| Status | Keterangan | Muncul di | QR Code | Bisa Check-in |
+|--------|------------|-----------|---------|---------------|
+| `PENDING` | Baru didaftarkan, menunggu verifikasi | DPS | Belum aktif | Tidak |
+| `APPROVED` | Disetujui sebagai pemilih tetap | DPT | Aktif | Ya |
+| `REJECTED` | Ditolak oleh admin | Tidak ada | Tidak | Tidak |
+| `REGISTERED` | Sudah check-in pertama kali | DPT | Aktif | Ya |
+| `CANCELLED` | Dibatalkan oleh admin/peserta | Tidak ada | Non-aktif | Tidak |
+
+### Alur Lengkap Registrasi (End-to-End)
+
+```mermaid
+sequenceDiagram
+    participant Admin
+    participant Absensi
+    participant Hipmigo
+    participant Email
+
+    Admin->>Absensi: Pilih peserta dari DPS
+    Absensi->>Hipmigo: GET /member/check (validasi anggota)
+    Hipmigo-->>Absensi: Data anggota (membership, e-KTA)
+    
+    Note over Absensi: Validasi 1 e-KTA = 1 registrasi
+    Absensi->>Absensi: Cek duplikasi e-KTA di event group
+    
+    alt Sudah ada duplikat
+        Absensi-->>Admin: ERROR: e-KTA sudah terdaftar
+    else Tidak ada duplikat
+        Absensi->>Absensi: Auto-assign participation_type
+        Note over Absensi: anggota-biasa → peserta-utusan
+        Absensi->>Absensi: Create registrasi (status: PENDING)
+        Absensi->>Absensi: Generate QR Code
+        Absensi->>Email: Kirim email tiket
+        Absensi-->>Admin: Registrasi berhasil (DPS)
+    end
+    
+    Note over Admin: --- Proses Verifikasi ---
+    
+    Admin->>Absensi: Review registrasi PENDING
+    Absensi-->>Admin: Tampilkan detail peserta
+    
+    alt Disetujui
+        Admin->>Absensi: Approve registrasi
+        Absensi->>Absensi: Status: PENDING → APPROVED
+        Note over Absensi: Peserta masuk DPT
+        Absensi->>Email: Kirim email konfirmasi
+    else Ditolak
+        Admin->>Absensi: Reject registrasi
+        Absensi->>Absensi: Status: PENDING → REJECTED
+        Absensi->>Email: Kirim email penolakan
+    end
+```
+
+---
+
+## Diagram Alur Status
+
+### Diagram 1: Alur Status Anggota (Membership)
+
+```mermaid
+graph TB
+    subgraph "hipmigo (Pusat Data)"
+        A1[Buat Anggota Baru] --> A2[Set Status: ACTIVE]
+        A2 --> A3[Update Data Anggota]
+        A3 --> A4{Status Berubah?}
+        A4 -->|Ya| A5[Update Status]
+        A4 -->|Tidak| A6[Tidak Ada Perubahan]
+        A5 --> A7[Push ke Absensi]
+    end
+    
+    subgraph "absensi.hipmibdg.or.id"
+        B1[Pull Data Anggota] --> B2[Cek Status]
+        B2 --> B3{Status?}
+        B3 -->|ACTIVE| B4[Bisa Daftar Event]
+        B3 -->|INACTIVE| B5[Tidak Bisa Daftar]
+        B3 -->|SUSPENDED| B6[Sementara Non-Aktif]
+    end
+    
+    A7 --> B1
+    
+    style A1 fill:#4CAF50,color:#fff
+    style A2 fill:#4CAF50,color:#fff
+    style A5 fill:#FF9800,color:#fff
+    style B4 fill:#4CAF50,color:#fff
+    style B5 fill:#f44336,color:#fff
+    style B6 fill:#FF9800,color:#fff
+```
+
+### Diagram 2: Alur DPS → DPT (Registration Status)
+
+```mermaid
+graph TD
+    subgraph "DPS (Daftar Pemilih Sementara)"
+        A1[Peserta Mendaftar] --> A2[Status: PENDING]
+        A2 --> A3[Muncul di DPS]
+    end
+    
+    subgraph "Verifikasi"
+        B1[Admin Review] --> B2{Keputusan}
+        B2 -->|Approve| B3[Status: APPROVED]
+        B2 -->|Reject| B4[Status: REJECTED]
+        B2 -->|Cancel| B5[Status: CANCELLED]
+    end
+    
+    subgraph "DPT (Daftar Pemilih Tetap)"
+        C1[Status: APPROVED] --> C2[Muncul di DPT]
+        C2 --> C3[QR Code Aktif]
+        C3 --> C4[Bisa Check-in]
+    end
+    
+    A3 --> B1
+    B3 --> C1
+    B4 --> D[Selesai - Tidak Ada di DPS/DPT]
+    B5 --> E[Selesai - Dibatalkan]
+    
+    style A2 fill:#FF9800,color:#fff
+    style A3 fill:#FF9800,color:#fff
+    style B3 fill:#4CAF50,color:#fff
+    style B4 fill:#f44336,color:#fff
+    style B5 fill:#9E9E9E,color:#fff
+    style C1 fill:#4CAF50,color:#fff
+    style C2 fill:#4CAF50,color:#fff
+    style C4 fill:#4CAF50,color:#fff
+```
+
+### Diagram 3: Validasi 1 e-KTA = 1 Registrasi
+
+```mermaid
+graph TD
+    A[Input: participant_id + event_group_id] --> B[Cek Participant by ID]
+    B --> C{Participant Ada?}
+    C -->|Tidak| D[ERROR: Peserta Tidak Ditemukan]
+    C -->|Ya| E[Ambil identification_number]
+    E --> F{identification_number Ada?}
+    F -->|Tidak| G[OK: Lanjut Registrasi]
+    F -->|Ya| H[Cek Duplikasi di Event Group]
+    H --> I{Sudah Ada di Event Group?}
+    I -->|Ya| J[ERROR: e-KTA Sudah Terdaftar]
+    I -->|Tidak| G
+    
+    G --> K[Create Registrasi: Status PENDING]
+    K --> L[Generate QR Code]
+    L --> M[Email Tiket]
+    
+    style D fill:#f44336,color:#fff
+    style J fill:#f44336,color:#fff
+    style G fill:#4CAF50,color:#fff
+    style K fill:#4CAF50,color:#fff
+```
+
+### Diagram 4: Auto Role Mapping
+
+```mermaid
+graph TD
+    A[Registrasi Baru] --> B[Ambil membership_type dari Participant]
+    B --> C{membership_type?}
+    C -->|anggota-luar-biasa| D[participation_type: undangan]
+    C -->|anggota-biasa| E[participation_type: peserta-utusan]
+    C -->|calon-undangan| F[participation_type: undangan-resmi]
+    C -->|anggota-tetap| G["participation_type: null - manual"]
+    C -->|null| G
+    
+    D --> H{participation_type tersedia di Event Group?}
+    E --> H
+    F --> H
+    G --> H
+    
+    H -->|Ya| I[Set participation_type]
+    H -->|Tidak| J[Set null, admin assign manual]
+    
+    I --> K[Create Registrasi]
+    J --> K
+    
+    style D fill:#4CAF50,color:#fff
+    style E fill:#2196F3,color:#fff
+    style F fill:#FF9800,color:#fff
+    style G fill:#9E9E9E,color:#fff
+```
+
+---
+
+## Validasi 1 e-KTA = 1 Registrasi
+
+### Problem Statement
+
+Untuk use case MUSCAB (Musyawarah Cabang), aturan penting adalah:
+> **1 e-KTA = 1 hak suara = 1 registrasi per event group**
+
+Saat ini **tidak ada validasi** untuk ini. Dua participant berbeda bisa punya e-KTA yang sama, atau participant yang sama bisa didaftarkan berkali-kali (meskipun ada cek event_group_id unik per participant).
+
+### Solusi yang Direkomendasikan
+
+#### Opsi A: Validasi di Level Registration (Recommended)
+
+```typescript
+// Di registration.controller.ts, sebelum create registrasi
+const existingRegistration = await prisma.registration.findFirst({
+  where: {
+    event_group_id: eventGroupId,
+    participant: {
+      identification_number: identificationNumber,
+    },
+  },
+  include: { participant: true },
+});
+
+if (existingRegistration) {
+  throw new Error(
+    `e-KTA ${identificationNumber} sudah terdaftar di event group ini oleh ${existingRegistration.participant.name}`
+  );
+}
+```
+
+**Kelebihan:**
+- Tidak mengubah schema database
+- Fleksibel (bisa di-skip untuk event tertentu jika diperlukan)
+- Mudah diimplementasi
+
+**Kekurangan:**
+- Duplikasi participant masih bisa terjadi (beda email, sama e-KTA)
+
+#### Opsi B: Unique Constraint di identification_number
+
+```prisma
+model Participant {
+  // ... existing fields
+  identification_number String? @unique  // Tambah unique constraint
+}
+```
+
+**Kelebihan:**
+- Mencegah duplikasi participant secara fundamental
+- Lebih ketat dan konsisten
+
+**Kekurangan:**
+- Mungkin ada data existing yang duplikat perlu dibersihkan
+- Tidak semua participant punya e-KTA (nullable, tapi unique)
+
+#### Opsi C: Kombinasi (Opsi A + B)
+
+Gunakan Opsi B untuk mencegah duplikasi participant, dan Opsi A untuk validasi di registration.
+
+### Rekomendasi: **Opsi A** (Validasi di Level Registration)
+
+**Alasan:**
+1. Tidak perlu ubah schema
+2. Bisa di-skip untuk event tertentu (misal: event terbuka yang tidak pakai e-KTA)
+3. Lebih fleksibel
+4. Duplikasi participant bisa di-handle terpisah (clean data)
+
+---
+
+## Rekomendasi Update
+
+### Prioritas 1: Validasi e-KTA (Critical — Harus Segera)
+
+| Item | Detail |
+|------|--------|
+| **Scope** | Backend registration controller |
+| **File** | `event-platform-be/src/modules/registrations/registration.controller.ts` |
+| **Logic** | Sebelum create, cek apakah ada participant lain dengan `identification_number` sama yang sudah terdaftar di event group yang sama |
+| **Error** | `"e-KTA [nomor] sudah terdaftar di event group ini oleh peserta lain"` |
+| **Effort** | 0.5 hari |
+| **Impact** | Mencegah duplikasi DPS, krusial untuk MUSCAB |
+
+### Prioritas 2: Status Transisi Registration (High)
+
+| Item | Detail |
+|------|--------|
+| **Scope** | Backend + Frontend |
+| **Schema** | Tambah validasi enum: `PENDING`, `APPROVED`, `REJECTED`, `REGISTERED`, `CANCELLED` |
+| **Default** | `"PENDING"` saat registrasi dibuat (bukan `REGISTERED`) |
+| **Approval** | Admin bisa ubah status dari `PENDING` → `APPROVED` atau `REJECTED` |
+| **DPS** | Filter DPS hanya tampilkan status `PENDING` |
+| **DPT** | Filter DPT tampilkan status `APPROVED` |
+| **Effort** | 2-3 hari |
+| **Impact** | Alur verifikasi yang proper, DPS → DPT jelas |
+
+### Prioritas 3: Auto Role Mapping (Medium)
+
+| Item | Detail |
+|------|--------|
+| **Scope** | Backend registration controller |
+| **Mapping** | `anggota-luar-biasa → undangan`, `anggota-biasa → peserta-utusan`, `calon-undangan → undangan-resmi` |
+| **Logic** | Auto-assign saat registrasi dibuat, admin bisa override |
+| **Effort** | 0.5 hari |
+| **Impact** | Mengurangi manual input, konsistensi data |
+
+### Prioritas 4: Status Anggota (Medium)
+
+| Item | Detail |
+|------|--------|
+| **Scope** | Backend + Frontend + Integration |
+| **Schema** | Tambah `status` field di Participant: `ACTIVE`, `INACTIVE`, `SUSPENDED` |
+| **Default** | `"ACTIVE"` |
+| **Integration** | hipmigo bisa push status update |
+| **Effort** | 1-2 hari |
+| **Impact** | Kontrol lebih baik atas data anggota aktif |
+
+### Prioritas 5: Public Endpoints (Low — Bisa Nanti)
+
+| Item | Detail |
+|------|--------|
+| **Scope** | Backend public controller |
+| **Endpoints** | 6 endpoint baru (detail event, events, attendance, registrations, per-member attendance, analytics) |
+| **Effort** | 2-3 hari |
+| **Impact** | Integrasi dengan hipmibdg.or.id |
+
+---
+
+## Decision Points untuk PM
+
+### Decision 1: Kapan Validasi e-KTA Harus Diimplementasi?
+
+| Opsi | Keterangan | Rekomendasi |
+|------|------------|-------------|
+| **A. Sekarang (sebelum MUSCAB)** | Implementasi segera di registration controller | ✅ **Recommended** |
+| **B. Setelah MUSCAB** | Tunda ke phase berikutnya | ❌ Tidak disarankan |
+| **C. Optional per event** | Jadikan flag di event group (event_group.use_ekta_validation) | Pertimbangkan jika ada event yang tidak pakai e-KTA |
+
+### Decision 2: Apakah Perlu Status DPS → DPT?
+
+| Opsi | Keterangan | Rekomendasi |
+|------|------------|-------------|
+| **A. Ya, dengan approval workflow** | PENDING → APPROVED → REGISTERED | ✅ **Recommended** untuk MUSCAB |
+| **B. Ya, tanpa approval** | PENDING → REGISTERED (langsung) | Cukup untuk event biasa |
+| **C. Tidak perlu** | Tetap pakai sistem sekarang (REGISTERED saja) | ❌ Tidak disarankan untuk MUSCAB |
+
+### Decision 3: Metode Sync Data hipmigo → Absensi?
+
+| Opsi | Keterangan | Rekomendasi |
+|------|------------|-------------|
+| **A. Manual CSV import** | Tetap seperti sekarang | ✅ **Short-term** (cukup untuk sekarang) |
+| **B. Webhook** | hipmigo push ke absensi saat data berubah | Ideal tapi butuh development di hipmigo |
+| **C. Scheduled sync** | Cron job dari absensi pull data dari hipmigo | Pertimbangkan untuk jangka panjang |
+
+### Decision 4: Apakah Perlu Status Anggota (Active/Inactive)?
+
+| Opsi | Keterangan | Rekomendasi |
+|------|------------|-------------|
+| **A. Ya, segera** | Tambah field `status` di Participant | Pertimbangkan jika ada kebutuhan |
+| **B. Ya, nanti** | Tunda ke phase berikutnya | ✅ **Short-term** (belum kritis) |
+| **C. Tidak perlu** | Tetap seperti sekarang | Cukup jika tidak ada anggota non-aktif |
+
+---
+
+## Ringkasan Effort
+
+| Prioritas | Item | Effort | Impact |
+|-----------|------|--------|--------|
+| **P1** | Validasi e-KTA | 0.5 hari | Critical |
+| **P2** | Status Transisi Registration | 2-3 hari | High |
+| **P3** | Auto Role Mapping | 0.5 hari | Medium |
+| **P4** | Status Anggota | 1-2 hari | Medium |
+| **P5** | Public Endpoints | 2-3 hari | Low |
+| | **Total** | **6.5-9.5 hari** | |
+
+---
+
+## Status Dokumen — Brainstorming
+
+| Item | Status |
+|------|--------|
+| Kondisi Saat Ini | ✅ Teridentifikasi |
+| Gap Analysis | ✅ Terdokumentasi |
+| Target State | ✅ Terdefinisi |
+| Diagram Alur | ✅ Terdokumentasi (Mermaid) |
+| Rekomendasi | ✅ Terdokumentasi |
+| Decision Points | ⏳ Menunggu Keputusan PM |
+| Implementasi | ⏳ Belum Mulai |
+
+---
+
+# Perbandingan: Dokumentasi Kita vs Brief PM
+
+**Date:** 15 August 2026  
+**Status:** Analisis Perbandingan  
+**Source:** Brief PM dari wiki.langgenginovasiteknologi.com
+
+---
+
+## Daftar Isi — Perbandingan
+
+1. [Ringkasan Perbedaan Utama](#ringkasan-perbedaan-utama)
+2. [Pemisahan 3 Konsep Status](#pemisahan-3-konsep-status)
+3. [Perbedaan Naming Convention](#perbedaan-naming-convention)
+4. [Perbedaan Nilai Status](#perbedaan-nilai-status)
+5. [Perbedaan Arsitektur Data](#perbedaan-arsitektur-data)
+6. [Perbedaan API](#perbedaan-api)
+7. [Lifecycle per Tipe Anggota](#lifecycle-per-tipe-anggota)
+8. [Tabel Perbandingan Lengkap](#tabel-perbandingan-lengkap)
+9. [Gap yang Perlu Ditutup](#gap-yang-perlu-ditutup)
+10. [Revisi Rekomendasi](#revisi-rekomendasi)
+
+---
+
+## Ringkasan Perbedaan Utama
+
+| Aspek | Dokumentasi Kita | Brief PM | Selisih |
+|-------|------------------|----------|---------|
+| **Konsep Status** | 2 (membership + participation) | 3 (membership + participation + approval) | PM punya approval status terpisah |
+| **Naming** | `membership_type`, `participation_type` | `membership_status`, `participation_status` | PM pakai "status" bukan "type" |
+| **Approval Workflow** | Di absensi (Registration.status) | Di website HIPMI (table terpisah) | PM pisahkan approval dari absensi |
+| **Source of Truth** | Absensi untuk semua | Absensi untuk status, HIPMI untuk approval | PM split responsibility |
+| **DPS Concept** | Semua registrasi = DPS | DPS = status awal, ada transisi ke DPT | PM punya lifecycle DPS → DPT |
+| **e-KTA Validation** | Tidak ada | Ada (cek ke absensi) | PM sudah include |
+| **API Baru** | 6 endpoints (public) | 2 endpoints (1 public + 1 internal) | PM lebih spesifik |
+
+---
+
+## Pemisahan 3 Konsep Status
+
+### Dokumentasi Kita (2 Konsep)
+
+```mermaid
+graph TD
+    A[Participant] -->|membership_type_id| B[Membership Type]
+    A -->|participation_type_id| C[Participation Type]
+    
+    B --> D[Anggota Tetap]
+    B --> E[Anggota Biasa]
+    B --> F[Anggota Luar Biasa]
+    
+    C --> G[Peserta Tetap]
+    C --> H[Peninjau]
+    C --> I[Undangan]
+    C --> J[VIP]
+    C --> K[Reguler]
+    
+    style A fill:#2196F3,color:#fff
+    style B fill:#4CAF50,color:#fff
+    style C fill:#FF9800,color:#fff
+```
+
+### Brief PM (3 Konsep)
+
+```mermaid
+graph TD
+    A[Participant] -->|membership_status| B[Membership Status]
+    A -->|participation_status| C[Participation Status]
+    D[Registration] -->|approval_status| E[Approval Status]
+    
+    B --> F[Anggota Biasa]
+    B --> G[Anggota Luar Biasa]
+    B --> H[Calon Undangan]
+    
+    C --> I[DPS]
+    C --> J[Peserta Utusan/DPT]
+    C --> K[Peninjau]
+    C --> L[Undangan]
+    C --> M[Undangan Resmi]
+    
+    E --> N[Not Submitted]
+    E --> O[Pending]
+    E --> P[Approved]
+    E --> Q[Rejected]
+    
+    style A fill:#2196F3,color:#fff
+    style B fill:#4CAF50,color:#fff
+    style C fill:#FF9800,color:#fff
+    style D fill:#9C27B0,color:#fff
+    style E fill:#f44336,color:#fff
+```
+
+### Perbedaan Kunci
+
+| Konsep | Dokumentasi Kita | Brief PM |
+|--------|------------------|----------|
+| **Membership** | Menentukan tipe anggota (Tetap/Biasa/Luar Biasa) | Menentukan kategori orang (Biasa/Luar Biasa/Calon Undangan) |
+| **Participation** | Menentukan role di event ( Peserta Tetap/Peninjau/Undangan/VIP/Reguler) | Menentukan posisi di event (DPS/DPT/Peninjau/Undangan/Undangan Resmi) |
+| **Approval** | Tidak ada (atau di Registration.status) | Terpisah di website HIPMI (Not Submitted/Pending/Approved/Rejected) |
+
+---
+
+## Perbedaan Naming Convention
+
+| Field | Dokumentasi Kita | Brief PM | Keterangan |
+|-------|------------------|----------|------------|
+| Tipe Anggota | `membership_type` | `membership_status` | PM pakai "status" |
+| Tipe Kepesertaan | `participation_type` | `participation_status` | PM pakai "status" |
+| Status Registrasi | `Registration.status` | `approval_status` (di table terpisah) | PM pisahkan approval |
+| Nama Model | `MembershipType` | `MembershipStatus` | PM rename |
+| Nama Model | `ParticipationType` | `ParticipationStatus` | PM rename |
+
+### Database Schema yang Diusulkan PM
+
+**Tabel `membership_status` (rename dari `membership_type`):**
+
+| Field | Tipe | Keterangan |
+|-------|------|------------|
+| id | UUID | Primary key |
+| name | String | Anggota Biasa, Anggota Luar Biasa, Calon Undangan |
+| slug | String | anggota-biasa, anggota-luar-biasa, calon-undangan |
+
+**Tabel `participation_status` (rename dari `participation_type`):**
+
+| Field | Tipe | Keterangan |
+|-------|------|------------|
+| id | UUID | Primary key |
+| name | String | DPS, Peserta Utusan, Peninjau, Undangan, Undangan Resmi |
+| slug | String | dps, peserta-utusan, peninjau, undangan, undangan-resmi |
+
+**Tabel `participant_status_requests` (BARU - di website HIPMI):**
+
+| Field | Tipe | Keterangan |
+|-------|------|------------|
+| id | UUID | Primary key |
+| participant_id | UUID | FK → Participant |
+| event_group_id | UUID | FK → EventGroup |
+| current_status | String | DPS (status awal) |
+| requested_status | String | DPT atau Peninjau |
+| approval_status | String | not_submitted, pending, approved, rejected |
+| notes | String | Catatan pengajuan |
+| approved_by | String | Siapa yang approve |
+| approved_at | DateTime | Kapan di-approve |
+
+---
+
+## Perbedaan Nilai Status
+
+### Membership Status
+
+| Dokumentasi Kita | Brief PM | Keterangan |
+|------------------|----------|------------|
+| Anggota Tetap | ❌ Tidak ada | PM tidak pakai "Tetap" |
+| Anggota Biasa | ✅ Anggota Biasa | Sama |
+| Anggota Luar Biasa | ✅ Anggota Luar Biasa | Sama |
+| — | ✅ Calon Undangan | PM tambah kategori ini |
+
+### Participation Status
+
+| Dokumentasi Kita | Brief PM | Keterangan |
+|------------------|----------|------------|
+| Peserta Tetap | ❌ Tidak ada | PM tidak pakai "Tetap" |
+| Peninjau | ✅ Peninjau | Sama |
+| Undangan | ✅ Undangan | Sama |
+| VIP | ❌ Tidak ada | PM tidak pakai VIP |
+| Reguler | ❌ Tidak ada | PM tidak pakai Reguler |
+| — | ✅ DPS | Status awal registrasi |
+| — | ✅ Peserta Utusan (DPT) | Hasil approval dari DPS |
+| — | ✅ Undangan Resmi | Untuk Calon Undangan |
+
+### Approval Status (BARU)
+
+| Dokumentasi Kita | Brief PM | Keterangan |
+|------------------|----------|------------|
+| Tidak ada | ✅ Not Submitted | Belum mengajukan |
+| Tidak ada | ✅ Pending | Sedang review |
+| Tidak ada | ✅ Approved | Disetujui |
+| Tidak ada | ✅ Rejected | Ditolak |
+
+---
+
+## Perbedaan Arsitektur Data
+
+### Dokumentasi Kita
+
+```mermaid
+graph TD
+    subgraph "Absensi (Source of Truth)"
+        A[Participant] --> B[Registration]
+        B --> C[participation_type_id]
+        B --> D[status: REGISTERED]
+    end
+    
+    subgraph "Website HIPMI"
+        E[Tidak ada data]
+    end
+    
+    A --> F[membership_type_id]
+    
+    style A fill:#2196F3,color:#fff
+    style B fill:#FF9800,color:#fff
+    style E fill:#9E9E9E,color:#fff
+```
+
+### Brief PM
+
+```mermaid
+graph TD
+    subgraph "Absensi (Source of Truth)"
+        A[Participant] --> B[Registration]
+        B --> C[participation_status]
+    end
+    
+    subgraph "Website HIPMI"
+        D[participant_status_requests] --> E[approval_status]
+    end
+    
+    A --> F[membership_status]
+    E -->|PUT /api/internal| B
+    
+    style A fill:#2196F3,color:#fff
+    style B fill:#FF9800,color:#fff
+    style D fill:#9C27B0,color:#fff
+    style E fill:#f44336,color:#fff
+```
+
+### Perbedaan Kunci
+
+| Aspek | Dokumentasi Kita | Brief PM |
+|-------|------------------|----------|
+| **Approval disimpan di** | Absensi (Registration.status) | Website HIPMI (participant_status_requests) |
+| **Source of Truth status** | Absensi untuk semua | Absensi untuk participation, HIPMI untuk approval |
+| **Flow approval** | Admin langsung ubah status di absensi | Peserta submit di HIPMI → Admin approve → HIPMI call API absensi |
+| **Data duplikasi** | Tidak ada | Tidak ada (approval hanya di HIPMI) |
+
+---
+
+## Perbedaan API
+
+### Endpoint yang Ada (Perlu Diubah)
+
+| Endpoint | Dokumentasi Kita | Brief PM | Yang Perlu Diubah |
+|----------|------------------|----------|-------------------|
+| `GET /daftar-pemilih-sementara` | Return `membership_type` | Return `membership_status` + `participation_status` | Ubah response |
+| `GET /participant/check-by-id` | Cek apakah participant ada | Cek status kepesertaan di event | Extend response |
+| `GET /participant/check` | Return `participation_type` | Return `participation_status` | Ubah response |
+
+### Endpoint Baru
+
+| Endpoint | Dokumentasi Kita | Brief PM | Keterangan |
+|----------|------------------|----------|------------|
+| `GET /event-groups/:id` | ✅ Ada | ✅ Ada | Sama |
+| `GET /event-groups/:id/events` | ✅ Ada | - | PM tidak sebut |
+| `GET /event-groups/:id/attendance` | ✅ Ada | - | PM tidak sebut |
+| `GET /event-groups/:id/registrations` | ✅ Ada | - | PM tidak sebut |
+| `GET /participant/:id/attendance` | ✅ Ada | - | PM tidak sebut |
+| `GET /analytics/summary` | ✅ Ada | - | PM tidak sebut |
+| `GET /participant/event-status` | ❌ Tidak ada | ✅ BARU | Cek status kepesertaan event |
+| `PUT /registrations/:id/participation-status` | ❌ Tidak ada | ✅ BARU (internal) | Update participation status |
+
+### Response Baru: `GET /api/public/participant/event-status`
+
+```json
+{
+  "found": true,
+  "participant": {
+    "id": "uuid",
+    "name": "Peserta 1 Santoso",
+    "company": "PT ABC",
+    "identification_number": "3273..."
+  },
+  "membership_status": {
+    "name": "Anggota Biasa",
+    "slug": "anggota-biasa"
+  },
+  "registration": {
+    "event_group": {
+      "id": "xxx",
+      "name": "MUSCAB BPC HIPMI Kota Bandung"
+    },
+    "participation_status": {
+      "name": "DPS",
+      "slug": "dps"
+    },
+    "approval": {
+      "status": "not_submitted",
+      "label": "Belum Mengajukan"
+    }
+  }
+}
+```
+
+### Response Baru: `PUT /api/internal/registrations/:id/participation-status`
+
+```json
+// Request
+{
+  "participation_status": "dpt"
+}
+
+// Response
+{
+  "success": true,
+  "registration": {
+    "id": "uuid",
+    "participation_status": {
+      "name": "Peserta Utusan",
+      "slug": "peserta-utusan"
+    }
+  }
+}
+```
+
+---
+
+## Lifecycle per Tipe Anggota
+
+### Anggota Biasa
+
+```mermaid
+graph LR
+    A[DPS] -->|Submit dokumen| B[Pending]
+    B -->|Approved| C[Peserta Utusan / DPT]
+    B -->|Rejected| D[Rejected]
+    
+    style A fill:#FF9800,color:#fff
+    style B fill:#9C27B0,color:#fff
+    style C fill:#4CAF50,color:#fff
+    style D fill:#f44336,color:#fff
+```
+
+### Pengurus
+
+```mermaid
+graph LR
+    A[DPS] -->|Approve| B[Peserta Utusan / DPT]
+    A -->|Approve| C[Peninjau]
+    
+    style A fill:#FF9800,color:#fff
+    style B fill:#4CAF50,color:#fff
+    style C fill:#2196F3,color:#fff
+```
+
+### Anggota Luar Biasa
+
+```mermaid
+graph LR
+    A[Undangan] -->|Langsung| B[Tidak perlu DPS]
+    
+    style A fill:#4CAF50,color:#fff
+    style B fill:#9E9E9E,color:#fff
+```
+
+### Calon Undangan
+
+```mermaid
+graph LR
+    A[Undangan Resmi] -->|Manual di absensi| B[Tidak perlu DPS]
+    
+    style A fill:#4CAF50,color:#fff
+    style B fill:#9E9E9E,color:#fff
+```
+
+### Perbandingan Lifecycle
+
+| Tipe Anggota | Dokumentasi Kita | Brief PM |
+|--------------|------------------|----------|
+| Anggota Biasa | Registrasi langsung → REGISTERED | DPS → Submit → Approval → DPT |
+| Anggota Luar Biasa | Registrasi langsung → Undangan | Langsung Undangan (tanpa DPS) |
+| Calon Undangan | Tidak ada | Manual → Undangan Resmi |
+| Pengurus | Tidak ada | DPS → Approve → DPT atau Peninjau |
+
+---
+
+## Tabel Perbandingan Lengkap
+
+| Aspek | Dokumentasi Kita | Brief PM | Status |
+|-------|------------------|----------|--------|
+| **Konsep** | 2 (membership + participation) | 3 (+ approval) | ⚠️ Perlu revisi |
+| **Naming** | `membership_type` | `membership_status` | ⚠️ Perlu rename |
+| **Naming** | `participation_type` | `participation_status` | ⚠️ Perlu rename |
+| **Membership Values** | Tetap, Biasa, Luar Biasa | Biasa, Luar Biasa, Calon Undangan | ⚠️ Perlu revisi |
+| **Participation Values** | Peserta Tetap, Peninjau, Undangan, VIP, Reguler | DPS, DPT, Peninjau, Undangan, Undangan Resmi | ⚠️ Perlu revisi |
+| **Approval Workflow** | Di absensi | Di website HIPMI | ⚠️ Perlu arsitektur ulang |
+| **Tabel Approval** | Tidak ada | `participant_status_requests` | ⚠️ Perlu buat baru |
+| **DPS Concept** | Semua registrasi | Status awal sebelum approval | ⚠️ Perlu definisi ulang |
+| **e-KTA Validation** | Belum ada | Ada (cek ke absensi) | ⚠️ Perlu implementasi |
+| **API `/event-status`** | Tidak ada | Ada | ⚠️ Perlu buat baru |
+| **API `/participation-status`** | Tidak ada | Ada (internal) | ⚠️ Perlu buat baru |
+| **Auto Role Mapping** | `anggota-biasa → peserta-utusan` | Tidak ada (manual) | ❌ Berbeda |
+| **Sync Method** | Manual CSV | Scraping/semi-otomatis | ⚠️ Perlu evaluasi |
+
+---
+
+## Gap yang Perlu Ditutup
+
+### Gap 1: Pemisahan 3 Konsep Status
+
+**Kondisi:** Kita masih campur aduk antara membership, participation, dan approval.
+
+**Yang perlu dilakukan:**
+1. Rename `MembershipType` → `MembershipStatus`
+2. Rename `ParticipationType` → `ParticipationStatus`
+3. Buat tabel `participant_status_requests` di website HIPMI
+4. Pisahkan approval workflow dari absensi
+
+### Gap 2: Naming Convention
+
+**Kondisi:** Kita pakai "type" PM pakai "status".
+
+**Yang perlu dilakukan:**
+1. Rename semua field `membership_type` → `membership_status`
+2. Rename semua field `participation_type` → `participation_status`
+3. Update semua kode yang referensi field lama
+
+### Gap 3: Nilai Status
+
+**Kondisi:** Kita punya nilai yang tidak dipakai PM (VIP, Reguler, Peserta Tetap) dan PM punya nilai yang tidak ada di kita (DPS, DPT, Calon Undangan, Undangan Resmi).
+
+**Yang perlu dilakukan:**
+1. Hapus: VIP, Reguler, Peserta Tetap
+2. Tambah: DPS, Peserta Utusan (DPT), Calon Undangan (membership), Undangan Resmi
+3. Update seed data
+
+### Gap 4: Approval Workflow
+
+**Kondisi:** Kita belum ada approval workflow.
+
+**Yang perlu dilakukan:**
+1. Buat tabel `participant_status_requests` di website HIPMI
+2. Implement flow: Submit → Pending → Approved/Rejected
+3. Buat API internal untuk update participation status
+4. Update frontend untuk show approval status
+
+### Gap 5: API Baru
+
+**Kondisi:** Kita belum punya endpoint untuk cek status kepesertaan event.
+
+**Yang perlu dilakukan:**
+1. Buat `GET /api/public/participant/event-status`
+2. Buat `PUT /api/internal/registrations/:id/participation-status`
+3. Update response endpoint yang sudah ada
+
+### Gap 6: Lifecycle Anggota
+
+**Kondisi:** Kita belum ada lifecycle per tipe anggota.
+
+**Yang perlu dilakukan:**
+1. Implement lifecycle Anggota Biasa: DPS → Submit → Approval → DPT
+2. Implement lifecycle Anggota Luar Biasa: Langsung Undangan
+3. Implement lifecycle Calon Undangan: Manual → Undangan Resmi
+4. Implement lifecycle Pengurus: DPS → Approve → DPT/Peninjau
+
+---
+
+## Revisi Rekomendasi
+
+### Prioritas 1: Rename Naming Convention (High)
+
+| Item | Detail |
+|------|--------|
+| **Scope** | Database + Backend + Frontend |
+| **Rename** | `MembershipType` → `MembershipStatus` |
+| **Rename** | `ParticipationType` → `ParticipationStatus` |
+| **Rename** | `membership_type` → `membership_status` |
+| **Rename** | `participation_type` → `participation_status` |
+| **Effort** | 2-3 hari |
+| **Impact** | Konsisten dengan brief PM |
+
+### Prioritas 2: Buat Tabel Approval (High)
+
+| Item | Detail |
+|------|--------|
+| **Scope** | Website HIPMI (backend) |
+| **Tabel** | `participant_status_requests` |
+| **Fields** | participant_id, event_group_id, current_status, requested_status, approval_status, notes, approved_by, approved_at |
+| **Effort** | 1-2 hari |
+| **Impact** | Approval workflow terpisah |
+
+### Prioritas 3: Update API Response (High)
+
+| Item | Detail |
+|------|--------|
+| **Scope** | Backend public controller |
+| **Update** | `/daftar-pemilih-sementara` → return `membership_status` + `participation_status` |
+| **Update** | `/participant/check` → return `participation_status` |
+| **Baru** | `GET /participant/event-status` |
+| **Baru** | `PUT /registrations/:id/participation-status` (internal) |
+| **Effort** | 2-3 hari |
+| **Impact** | API sesuai brief PM |
+
+### Prioritas 4: Update Status Values (Medium)
+
+| Item | Detail |
+|------|--------|
+| **Scope** | Database seed + Backend logic |
+| **Membership** | Hapus "Tetap", tambah "Calon Undangan" |
+| **Participation** | Hapus "Peserta Tetap", "VIP", "Reguler"; tambah "DPS", "Peserta Utusan", "Undangan Resmi" |
+| **Effort** | 1 hari |
+| **Impact** | Nilai status sesuai brief PM |
+
+### Prioritas 5: Implement Lifecycle (Medium)
+
+| Item | Detail |
+|------|--------|
+| **Scope** | Backend + Frontend |
+| **Lifecycle** | Anggota Biasa: DPS → DPT |
+| **Lifecycle** | Anggota Luar Biasa: Langsung Undangan |
+| **Lifecycle** | Calon Undangan: Manual → Undangan Resmi |
+| **Effort** | 3-5 hari |
+| **Impact** | Alur kepesertaan sesuai brief PM |
+
+---
+
+## Ringkasan Effort (Revisi)
+
+| Prioritas | Item | Effort | Impact |
+|-----------|------|--------|--------|
+| **P1** | Rename Naming Convention | 2-3 hari | High |
+| **P2** | Buat Tabel Approval | 1-2 hari | High |
+| **P3** | Update API Response | 2-3 hari | High |
+| **P4** | Update Status Values | 1 hari | Medium |
+| **P5** | Implement Lifecycle | 3-5 hari | Medium |
+| | **Total** | **9-14 hari** | |
+
+---
+
+## Status Dokumen — Perbandingan
+
+| Item | Status |
+|------|--------|
+| Perbandingan Konsep | ✅ Terdokumentasi |
+| Perbedaan Naming | ✅ Terdokumentasi |
+| Perbedaan API | ✅ Terdokumentasi |
+| Gap Analysis | ✅ Terdokumentasi |
+| Revisi Rekomendasi | ✅ Terdokumentasi |
+| Keputusan PM | ⏳ Menunggu |
+| Implementasi | ⏳ Belum Mulai |
