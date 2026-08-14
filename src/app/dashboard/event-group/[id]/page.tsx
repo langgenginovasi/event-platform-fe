@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Pencil, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 import { usePermissions } from "@/hooks/usePermissions";
@@ -12,6 +12,7 @@ import { WorkspaceChart } from "@/components/features/event-group-detail/Workspa
 import { EmailSettingsCard } from "@/components/features/event-group-detail/EmailSettingsCard";
 import { TestEmailCard } from "@/components/features/event-group-detail/TestEmailCard";
 import { EmailPreviewCard } from "@/components/features/event-group-detail/EmailPreviewCard";
+import { EditEventGroupNameModal } from "@/components/features/event-group-detail/EditEventGroupNameModal";
 
 export default function WorkspaceOverviewPage() {
   const params = useParams();
@@ -19,7 +20,6 @@ export default function WorkspaceOverviewPage() {
   const eventGroupId = params.id as string;
   const actions = useWorkspaceOverviewActions(eventGroupId);
   const { can } = usePermissions();
-
 
   return (
     <div className="flex flex-col space-y-7 md:space-y-10 pb-20 md:pb-0">
@@ -32,7 +32,26 @@ export default function WorkspaceOverviewPage() {
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <div className="flex-1" />
+        <div className="flex-1">
+          {actions.isLoading ? (
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          ) : (
+            <h1 className="text-xl font-bold leading-tight" style={{ color: "var(--brand-primary)" }}>
+              {actions.eventGroup?.name ?? "Grup Event"}
+            </h1>
+          )}
+        </div>
+        {can("eventGroupManage") && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => actions.setIsEditNameModalOpen(true)}
+            disabled={actions.isLoading}
+          >
+            <Pencil className="h-4 w-4 mr-1.5" />
+            Ubah Nama
+          </Button>
+        )}
       </div>
 
       <WorkspaceSummaryCards
@@ -53,6 +72,12 @@ export default function WorkspaceOverviewPage() {
               onSubjectChange={actions.setEmailSubject}
               emailBody={actions.emailBody}
               onBodyChange={actions.setEmailBody}
+              showQr={actions.showQr}
+              onShowQrChange={actions.setShowQr}
+              showParticipantInfo={actions.showParticipantInfo}
+              onShowParticipantInfoChange={actions.setShowParticipantInfo}
+              showAgenda={actions.showAgenda}
+              onShowAgendaChange={actions.setShowAgenda}
               onSave={actions.handleSaveEmailSettings}
               isSaving={actions.isSavingEmail}
             />
@@ -72,11 +97,23 @@ export default function WorkspaceOverviewPage() {
             <EmailPreviewCard
               emailSubject={actions.emailSubject}
               emailBody={actions.emailBody}
-              selectedEventName={actions.selectedEventName}
+              eventGroupName={actions.eventGroup?.name ?? ""}
+              events={actions.eventGroup?.events ?? []}
+              showQr={actions.showQr}
+              showParticipantInfo={actions.showParticipantInfo}
+              showAgenda={actions.showAgenda}
             />
           </div>
         </>
       )}
+
+      <EditEventGroupNameModal
+        open={actions.isEditNameModalOpen}
+        onOpenChange={actions.setIsEditNameModalOpen}
+        currentName={actions.eventGroup?.name ?? ""}
+        onSave={actions.handleRenameEventGroup}
+        isSaving={actions.isSavingName}
+      />
     </div>
   );
 }
