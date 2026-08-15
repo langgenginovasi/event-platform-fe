@@ -327,7 +327,7 @@ PUT /api/internal/registrations/{id}/participation-status
 ```
 
 ```json
-{ "participation_status": "dpt" }
+{ "participation_status": "peserta-utusan" }
 ```
 
 ## 15. Perubahan Model Naming
@@ -354,7 +354,7 @@ Fitur sekarang bukan hanya peserta tetap (ada DPT, Peninjau, kemungkinan Utusan)
 | validated_by | approved_by |
 | validated_at | approved_at |
 
-Tambahan: `requested_status` (contoh: `dpt`, `peninjau`).
+Tambahan: `requested_status` (contoh: `peserta-utusan`, `peninjau`).
 
 ## 17. Kesimpulan
 

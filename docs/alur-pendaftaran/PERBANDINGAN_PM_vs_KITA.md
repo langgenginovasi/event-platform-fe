@@ -362,7 +362,7 @@ graph TD
 ```json
 // Request
 {
-  "participation_status": "dpt"
+  "participation_status": "peserta-utusan"
 }
 
 // Response
@@ -494,7 +494,7 @@ graph LR
 | **e-KTA Validation** | Belum ada | Ada (cek ke absensi) | ⚠️ Perlu implementasi |
 | **API `/event-status`** | Tidak ada | Ada | ⚠️ Perlu buat baru |
 | **API `/participation-status`** | Tidak ada | Ada (internal) | ⚠️ Perlu buat baru |
-| **Auto Role Mapping** | `anggota-biasa → peserta-utusan` | Tidak ada (manual) | ❌ Berbeda |
+| **Auto Role Mapping** | `anggota-biasa → peserta-utusan` | Path transisi DPS → Peserta Utusan (default) / Peninjau, di-enforce di internal API; mapping konsep → slug via settings web | ✅ Diimplementasi |
 | **Sync Method** | Manual CSV | Scraping/semi-otomatis | ⚠️ Perlu evaluasi |
 
 ---

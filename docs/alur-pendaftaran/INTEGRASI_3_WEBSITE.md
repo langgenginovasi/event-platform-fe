@@ -530,17 +530,19 @@ graph LR
 
 ### Gap 4: Auto Role Mapping Belum Diimplementasi
 
-**Kondisi:** Documentation bilang mapping ada, tapi kode belum ada.
+**Status:** Tergantikan oleh **path transisi status kepesertaan** (DPS → Peserta Utusan/Peninjau) yang sudah diimplementasikan, bukan auto-assign saat registrasi.
 
-**Dampak:**
-- Admin harus manual assign participation type untuk setiap peserta
-- Rentan kesalahan input
-- Tidak konsisten
+**Implementasi yang ada:**
+- **Backend absensi:** `src/config/participation-transitions.ts` — konstanta path `dps → { defaultTo: "peserta-utusan", allowedTo: ["peserta-utusan", "peninjau"] }`, di-enforce di `PUT /api/internal/registrations/:id/participation-status` (transisi di luar `allowedTo` ditolak 400).
+- **Website HIPMI:** mapping konsep → slug absensi disimpan di tabel `settings` (`muscab_slug_dps`, `muscab_slug_peserta_utusan`, `muscab_slug_peninjau`) dan diatur dari halaman admin "Pengaturan MUSCAB". Saat approve, `syncParticipationStatus` mengirim slug hasil mapping (bukan slug hardcode).
+- **Default (belum diatur):** `dps → dps`, `peserta-utusan → peserta-utusan`, `peninjau → peninjau`.
 
-**Mapping yang direncanakan:**
+**Mapping yang sempat direncanakan (auto-assign membership → participation):**
 - `anggota-luar-biasa → undangan`
 - `anggota-biasa → peserta-utusan`
 - `calon-undangan → undangan-resmi`
+
+> Konsep auto-assign ini **tidak diimplementasikan** — keputusan desain: status kepesertaan ditentukan via alur approval (DPS → Peserta Utusan/Peninjau), bukan otomatis dari tipe keanggotaan.
 
 ### Gap 5: Data Sync hipmigo → Absensi Masih Manual
 
@@ -1278,7 +1280,7 @@ graph TD
 ```json
 // Request
 {
-  "participation_status": "dpt"
+  "participation_status": "peserta-utusan"
 }
 
 // Response

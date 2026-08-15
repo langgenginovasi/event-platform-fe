@@ -331,7 +331,7 @@ PUT /api/internal/registrations/{id}/participation-status
 Body:
 
 {
- "participation_status":"dpt"
+ "participation_status":"peserta-utusan"
 }
 
 Dipanggil ketika approve.
