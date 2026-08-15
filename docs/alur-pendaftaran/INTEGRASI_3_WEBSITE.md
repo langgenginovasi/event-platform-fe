@@ -1,8 +1,8 @@
 # Business Logic — Integrasi 3 Website
 
 **Date:** 15 August 2026  
-**Status:** Draft — Menunggu Approval  
-**Revisi:** 1 — Koreksi flow integrasi
+**Status:** Implemented — Mengikuti ALUR_STATUS_PESERTA.md  
+**Revisi:** 2 — Update status implementasi & API aktual
 
 ---
 
@@ -41,7 +41,7 @@ absensi.hipmibdg.or.id (event + absensi)
 hipmibdg.or.id (company profile)
 ```
 
-**Prinsip:** Data bersifat **on-demand pull** melalui **public API** (tanpa autentikasi, read-only).
+**Prinsip:** Data bersifat **on-demand pull** melalui **public API** dengan **API key** (credential website HIPMI). Bukan lagi "tanpa autentikasi" — semua endpoint public & internal kini wajib API key (header `X-API-Key` atau `Authorization: Bearer`), di-seed via `HIPMI_WEBSITE_API_KEY`.
 
 ---
 
@@ -234,36 +234,45 @@ Aturan:
 
 | Prinsip | Penjelasan |
 |---------|------------|
-| **Public (No Auth)** | Semua endpoint bisa diakses tanpa autentikasi |
-| **Read-Only** | Hanya GET, tidak ada POST/PUT/DELETE |
+| **API Key** | Semua endpoint (public & internal) wajib API key via `X-API-Key` / `Authorization: Bearer` |
+| **Read-Only (public)** | Public API hanya GET |
+| **Internal (write)** | `PUT /api/internal/*` untuk update status saat approve (scope `internal:write`) |
 | **On-Demand** | Data di-pull saat dibutuhkan, bukan push |
 | **Rate Limited** | 300 req/min per IP (global default) |
 | **RESTful** | Konsisten dengan konvensi REST |
 
 ### Endpoint Map
 
-#### Endpoint yang Sudah Ada (7 endpoints)
+#### Public API — Sudah Ada (9 endpoints)
 
 | # | Endpoint | Fungsi | Consumer |
 |---|----------|--------|----------|
 | 1 | `GET /event-groups` | Daftar semua event | hipmibdg.or.id |
-| 2 | `GET /participant/check` | Cek registrasi by email | hipmibdg.or.id |
-| 3 | `GET /participant/check-by-id` | Lookup anggota by KTA | hipmigo |
-| 4 | `GET /participant/check-by-email` | Lookup anggota by email | hipmigo |
-| 5 | `GET /participant/detail` | Profil lengkap + riwayat | hipmigo |
-| 6 | `GET /member/check` | Validasi keanggotaan | hipmigo |
-| 7 | `GET /daftar-pemilih-sementara` | DPS untuk event | hipmibdg.or.id |
+| 2 | `GET /participants` | Search peserta (nama/NIK/perusahaan) | hipmibdg.or.id |
+| 3 | `GET /participant/check` | Cek registrasi by email | hipmibdg.or.id |
+| 4 | `GET /participant/check-by-id` | Lookup anggota by KTA | hipmigo |
+| 5 | `GET /participant/check-by-email` | Lookup anggota by email | hipmigo |
+| 6 | `GET /participant/detail` | Profil lengkap + riwayat | hipmigo |
+| 7 | `GET /member/check` | Validasi keanggotaan | hipmigo |
+| 8 | `GET /daftar-pemilih-sementara` | DPS untuk event | hipmibdg.or.id |
+| 9 | `GET /event-groups/:id/participant/status` | **Status kepesertaan per E-KTA** (sesuai ALUR_STATUS_PESERTA §14) | hipmibdg.or.id |
 
-#### Endpoint yang Perlu Ditambah (6 endpoints baru)
+#### Internal API — Sudah Ada (1 endpoint)
 
 | # | Endpoint | Fungsi | Consumer |
 |---|----------|--------|----------|
-| 8 | `GET /event-groups/:id` | Detail 1 event group | hipmibdg.or.id |
-| 9 | `GET /event-groups/:id/events` | Event + sesi dalam 1 group | hipmibdg.or.id |
-| 10 | `GET /event-groups/:id/attendance` | Statistik kehadiran | hipmibdg.or.id |
-| 11 | `GET /event-groups/:id/registrations` | Daftar peserta (filterable) | hipmibdg.or.id |
-| 12 | `GET /participant/:id/attendance` | Kehadiran 1 anggota di 1 event group | hipmigo |
-| 13 | `GET /analytics/summary` | Statistik agregat publik | hipmibdg.or.id |
+| 10 | `PUT /registrations/:id/participation-status` | Update participation_status saat approve (DPS→DPT/Peninjau) | hipmibdg.or.id (scope `internal:write`) |
+
+#### Endpoint yang Masih Rencana (belum dibuat)
+
+| # | Endpoint | Fungsi | Consumer |
+|---|----------|--------|----------|
+| 11 | `GET /event-groups/:id` | Detail 1 event group | hipmibdg.or.id |
+| 12 | `GET /event-groups/:id/events` | Event + sesi dalam 1 group | hipmibdg.or.id |
+| 13 | `GET /event-groups/:id/attendance` | Statistik kehadiran | hipmibdg.or.id |
+| 14 | `GET /event-groups/:id/registrations` | Daftar peserta (filterable) | hipmibdg.or.id |
+| 15 | `GET /participant/:id/attendance` | Kehadiran 1 anggota di 1 event group | hipmigo |
+| 16 | `GET /analytics/summary` | Statistik agregat publik | hipmibdg.or.id |
 
 ---
 
@@ -399,14 +408,16 @@ Aturan:
 
 ## Status Dokumen
 
+> **Catatan Implementasi:** Bagian 1 (Integrasi 3 Website) sudah terimplementasi untuk alur status kepesertaan. Lihat `ALUR_STATUS_PESERTA.md` untuk detail aktual.
+
 | Item | Status |
 |------|--------|
-| Business Logic | ✅ Draft |
-| Endpoint Specification | ✅ Draft |
-| Phase Plan | ✅ Draft |
-| Review dari Tim | ⏳ Menunggu |
-| Approval | ⏳ Menunggu |
-| Implementasi | ⏳ Belum Mulai |
+| Business Logic | ✅ Terdefinisi |
+| Endpoint Specification | ✅ Terimplementasi (9 public + 1 internal, wajib API key) |
+| Phase Plan | ✅ Sebagian (endpoint status kepesertaan selesai; endpoint lain masih rencana) |
+| Review dari Tim | ✅ |
+| Approval | ✅ |
+| Implementasi | ✅ Alur status kepesertaan |
 
 ---
 
@@ -966,8 +977,8 @@ Gunakan Opsi B untuk mencegah duplikasi participant, dan Opsi A untuk validasi d
 | Target State | ✅ Terdefinisi |
 | Diagram Alur | ✅ Terdokumentasi (Mermaid) |
 | Rekomendasi | ✅ Terdokumentasi |
-| Decision Points | ⏳ Menunggu Keputusan PM |
-| Implementasi | ⏳ Belum Mulai |
+| Decision Points | ✅ Diputuskan (mengikuti Brief PM — approval di website HIPMI) |
+| Implementasi | ✅ Alur status kepesertaan (lihat `ALUR_STATUS_PESERTA.md`) |
 
 ---
 
@@ -1209,28 +1220,28 @@ graph TD
 
 ## Perbedaan API
 
-### Endpoint yang Ada (Perlu Diubah)
+### Endpoint yang Sudah Diubah (Sesuai ALUR_STATUS_PESERTA)
 
-| Endpoint | Dokumentasi Kita | Brief PM | Yang Perlu Diubah |
-|----------|------------------|----------|-------------------|
-| `GET /daftar-pemilih-sementara` | Return `membership_type` | Return `membership_status` + `participation_status` | Ubah response |
-| `GET /participant/check-by-id` | Cek apakah participant ada | Cek status kepesertaan di event | Extend response |
-| `GET /participant/check` | Return `participation_type` | Return `participation_status` | Ubah response |
+| Endpoint | Sebelum | Sesudah (aktual) | Status |
+|----------|---------|------------------|--------|
+| `GET /daftar-pemilih-sementara` | Return `membership_type` | Return `membership_status` | ✅ Sudah |
+| `GET /participant/check-by-id` | Cek participant ada | Cek participant ada (status kepesertaan via endpoint baru) | ✅ Sudah |
+| `GET /participant/check` | Return `participation_type` | Return `participation_status` | ✅ Sudah |
 
 ### Endpoint Baru
 
 | Endpoint | Dokumentasi Kita | Brief PM | Keterangan |
 |----------|------------------|----------|------------|
-| `GET /event-groups/:id` | ✅ Ada | ✅ Ada | Sama |
-| `GET /event-groups/:id/events` | ✅ Ada | - | PM tidak sebut |
-| `GET /event-groups/:id/attendance` | ✅ Ada | - | PM tidak sebut |
-| `GET /event-groups/:id/registrations` | ✅ Ada | - | PM tidak sebut |
-| `GET /participant/:id/attendance` | ✅ Ada | - | PM tidak sebut |
-| `GET /analytics/summary` | ✅ Ada | - | PM tidak sebut |
-| `GET /participant/event-status` | ❌ Tidak ada | ✅ BARU | Cek status kepesertaan event |
-| `PUT /registrations/:id/participation-status` | ❌ Tidak ada | ✅ BARU (internal) | Update participation status |
+| `GET /event-groups/:id` | ✅ Ada | ✅ Ada | Rencana (belum dibuat) |
+| `GET /event-groups/:id/events` | ✅ Ada | - | Rencana (belum dibuat) |
+| `GET /event-groups/:id/attendance` | ✅ Ada | - | Rencana (belum dibuat) |
+| `GET /event-groups/:id/registrations` | ✅ Ada | - | Rencana (belum dibuat) |
+| `GET /participant/:id/attendance` | ✅ Ada | - | Rencana (belum dibuat) |
+| `GET /analytics/summary` | ✅ Ada | - | Rencana (belum dibuat) |
+| `GET /event-groups/:id/participant/status` | ❌ Tidak ada | ✅ BARU | **Sudah dibuat** — cek status kepesertaan event |
+| `PUT /registrations/:id/participation-status` | ❌ Tidak ada | ✅ BARU (internal) | **Sudah dibuat** — update participation status saat approve |
 
-### Response Baru: `GET /api/public/participant/event-status`
+### Response Baru: `GET /api/public/event-groups/:id/participant/status`
 
 ```json
 {
@@ -1499,6 +1510,8 @@ graph LR
 
 ## Status Dokumen — Perbandingan
 
+> **Catatan Implementasi:** Gap pada bagian ini sudah ditutup untuk alur status kepesertaan (rename naming, tabel approval, endpoint baru, nilai status). Detail aktual di `ALUR_STATUS_PESERTA.md`.
+
 | Item | Status |
 |------|--------|
 | Perbandingan Konsep | ✅ Terdokumentasi |
@@ -1506,5 +1519,5 @@ graph LR
 | Perbedaan API | ✅ Terdokumentasi |
 | Gap Analysis | ✅ Terdokumentasi |
 | Revisi Rekomendasi | ✅ Terdokumentasi |
-| Keputusan PM | ⏳ Menunggu |
-| Implementasi | ⏳ Belum Mulai |
+| Keputusan PM | ✅ Diputuskan (mengikuti Brief PM) |
+| Implementasi | ✅ Alur status kepesertaan |

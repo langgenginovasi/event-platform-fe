@@ -130,13 +130,13 @@ Karena yang dicari adalah status kepesertaan event, bukan status member.
 
 Saya bayangkan endpoint baru:
 
-GET /api/public/participant/event-status
+GET /api/public/event-groups/:id/participant/status
 
 atau tetap extend:
 
 GET /api/public/participant/check-by-id
 
-Response:
+Response (aktual, sudah diimplementasi):
 
 {
   "found": true,
@@ -463,3 +463,15 @@ Update kembali ke Absensi
 Jadi website HIPMI tidak menjadi pemilik status peserta, tetapi menjadi workflow approval layer.
 
 Dan menurut saya ini yang paling konsisten dengan keputusan awal bahwa aplikasi absensi adalah sumber data utama.
+
+---
+
+## Status Implementasi
+
+Dokumen ini adalah proposal awal. Seluruh konsep di atas sudah diimplementasikan (lihat `ALUR_STATUS_PESERTA.md`):
+
+- **API**: `GET /api/public/event-groups/:id/participant/status` + `PUT /api/internal/registrations/:id/participation-status` — ✅ sudah ada (wajib API key).
+- **Rename**: `PesertaTetapRegistration` → `ParticipantStatusRequest`, `PesertaTetapRegistrationController` → `ParticipantStatusRequestController`, `PesertaTetapController` → `ParticipantStatusApprovalController` — ✅ sudah.
+- **DB**: tabel `peserta_tetap_registrations` → `participant_status_requests` + kolom `requested_status`, `membership_status_snapshot`, `registration_id` — ✅ sudah.
+- **Response public API**: `membership_type` → `membership_status`, `participation_type` → `participation_status` — ✅ sudah.
+- **Sync saat approve**: `approved` → `synced` / `update_failed` + retry manual — ✅ sudah.
