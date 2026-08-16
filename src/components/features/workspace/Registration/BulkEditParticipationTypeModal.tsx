@@ -39,20 +39,20 @@ export function BulkEditParticipationTypeModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Ubah Tipe Kepesertaan</DialogTitle>
+          <DialogTitle>Ubah Status Kepesertaan</DialogTitle>
         </DialogHeader>
         <DialogBody className="space-y-4">
           <p className="text-sm text-gray-500">
-            Ubah tipe kepesertaan untuk {selectedCount} registrasi yang dipilih.
+            Ubah status kepesertaan untuk {selectedCount} registrasi yang dipilih.
           </p>
           {activeTypes(participationTypes).length === 0 ? (
             <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-700">
-              Event group ini belum memiliki tipe kepesertaan. Silakan tambahkan
-              tipe kepesertaan terlebih dahulu di halaman pengaturan event group.
+              Event group ini belum memiliki status kepesertaan. Silakan tambahkan
+              status kepesertaan terlebih dahulu di halaman pengaturan event group.
             </div>
           ) : (
             <div>
-              <label className="text-sm font-medium mb-1 block">Tipe Kepesertaan</label>
+              <label className="text-sm font-medium mb-1 block">Status Kepesertaan</label>
               <Select
                 items={activeTypes(participationTypes).map((pt: any) => ({ value: String(pt.id), label: pt.name }))}
                 value={participationTypeId}

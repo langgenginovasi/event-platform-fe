@@ -116,9 +116,9 @@ export function DetailRegistrationModal({
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Tipe Kepesertaan</p>
+                    <p className="text-sm text-muted-foreground">Status Kepesertaan</p>
                     <p className="font-medium text-foreground">
-                      {detail.participation_type?.name || "-"}
+                      {detail.participation_status?.name || "-"}
                     </p>
                   </div>
                   <div>

@@ -27,7 +27,7 @@ export interface RegistrationItem {
     company: string;
     gender: string;
   };
-  participation_type?: {
+  participation_status?: {
     id: string;
     name: string;
     slug: string;
@@ -280,7 +280,7 @@ export function useRegistrationActions(eventGroupId: string) {
       await api.post("/registrations/bulk", {
         event_group_id: eventGroupId,
         participant_ids: addSelectedIds,
-        participation_type_id: addParticipationTypeId || null,
+        participation_status_id: addParticipationTypeId || null,
       });
       toast.success(`${addSelectedIds.length} peserta berhasil didaftarkan`);
       setIsAddModalOpen(false);
@@ -401,7 +401,7 @@ export function useRegistrationActions(eventGroupId: string) {
     try {
       await api.put("/registrations/bulk-update", {
         registration_ids: selectedIds,
-        participation_type_id: bulkParticipationTypeId || null,
+        participation_status_id: bulkParticipationTypeId || null,
       });
       toast.success(`${selectedIds.length} registrasi berhasil diperbarui`);
       setIsBulkEditModalOpen(false);
@@ -409,7 +409,7 @@ export function useRegistrationActions(eventGroupId: string) {
       setSelectedIds([]);
       mutate();
     } catch (err: any) {
-      toast.error(extractApiError(err, "Gagal memperbarui tipe kepesertaan"));
+      toast.error(extractApiError(err, "Gagal memperbarui status kepesertaan"));
     } finally {
       setIsBulkUpdating(false);
     }
@@ -523,8 +523,8 @@ export function useRegistrationActions(eventGroupId: string) {
   const handleStartInlineEdit = (registration: RegistrationItem) => {
     setEditingRegId(registration.id);
     setEditParticipationValue(
-      registration.participation_type?.id != null
-        ? String(registration.participation_type.id)
+      registration.participation_status?.id != null
+        ? String(registration.participation_status.id)
         : ""
     );
   };
@@ -538,14 +538,14 @@ export function useRegistrationActions(eventGroupId: string) {
     setLoadingEditId(registrationId);
     try {
       await api.put(`/registrations/${registrationId}`, {
-        participation_type_id: editParticipationValue || null,
+        participation_status_id: editParticipationValue || null,
       });
-      toast.success("Tipe kepesertaan berhasil diperbarui");
+      toast.success("Status kepesertaan berhasil diperbarui");
       setEditingRegId(null);
       setEditParticipationValue("");
       mutate();
     } catch (err: any) {
-      toast.error(err?.message || "Gagal memperbarui tipe kepesertaan");
+      toast.error(err?.message || "Gagal memperbarui status kepesertaan");
     } finally {
       setLoadingEditId(null);
     }

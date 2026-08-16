@@ -47,7 +47,7 @@ export function BulkActionBar({
             onClick={onEditParticipationType}
           >
             <Tags className="w-3.5 h-3.5 mr-1" />
-            Ubah Tipe Kepesertaan
+            Ubah Status Kepesertaan
           </Button>
         )}
         {onSendEmail && (

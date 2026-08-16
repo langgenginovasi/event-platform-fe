@@ -127,7 +127,7 @@ export default function ExportPage() {
         <FileSpreadsheet className="w-8 h-8 text-green-600" />
         <div>
           <p className="text-sm font-medium text-gray-700">Format Ekspor: Excel (.xlsx)</p>
-          <p className="text-xs text-gray-500">Laporan per event: nama grup &amp; event di header, dilengkapi nama peserta, tipe kepesertaan, dan tipe check-in/out.</p>
+          <p className="text-xs text-gray-500">Laporan per event: nama grup &amp; event di header, dilengkapi nama peserta, status kepesertaan, dan tipe check-in/out.</p>
         </div>
       </div>
 

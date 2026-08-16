@@ -4,11 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TableCard } from "@/components/shared/CustomCards";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, MoveRight } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from "@/components/ui/dialog";
 import { TableToolbar } from "@/components/shared/TableToolbar";
 import { TableBodyStates } from "@/components/shared/TableBodyStates";
 import { ConfirmationDialog } from "@/components/shared/ConfirmationDialog";
+import { MoveDeleteDialog } from "@/components/shared/MoveDeleteDialog";
+import { BulkMoveModal, type BulkMoveItem } from "@/components/shared/BulkMoveModal";
 import { generateSlug } from "@/lib/utils";
 
 interface TypeCrudTableProps {
@@ -38,6 +40,33 @@ interface TypeCrudTableProps {
   isDeleting?: boolean;
   deleteItemName?: string;
   onConfirmDelete?: () => void;
+  moveDeleteOpen?: boolean;
+  onMoveDeleteOpenChange?: (open: boolean) => void;
+  moveDeleteOptions?: { id: string; name: string }[];
+  moveDeleteCount?: number;
+  moveDeleteItemName?: string;
+  moveAffectedLabel?: string;
+  moveTargetId?: string;
+  onMoveTargetChange?: (val: string) => void;
+  onConfirmMoveDelete?: () => void;
+  onMoveMembers?: (item: any) => void;
+  bulkMoveOpen?: boolean;
+  onBulkMoveOpenChange?: (open: boolean) => void;
+  bulkMoveTitle?: string;
+  bulkMoveSubtitle?: string;
+  bulkMoveSearch?: string;
+  onBulkMoveSearchChange?: (val: string) => void;
+  bulkMoveItems?: BulkMoveItem[];
+  bulkMoveSelectedIds?: string[];
+  onBulkMoveToggleItem?: (id: string) => void;
+  onBulkMoveToggleAll?: (checked: boolean) => void;
+  bulkMoveOptions?: { id: string; name: string }[];
+  bulkMoveTargetLabel?: string;
+  bulkMoveTargetId?: string;
+  onBulkMoveTargetChange?: (val: string) => void;
+  bulkMoveListLoading?: boolean;
+  bulkMoveIsMoving?: boolean;
+  onConfirmBulkMove?: () => void;
 }
 
 export function TypeCrudTable({
@@ -67,6 +96,33 @@ export function TypeCrudTable({
   isDeleting = false,
   deleteItemName,
   onConfirmDelete,
+  moveDeleteOpen = false,
+  onMoveDeleteOpenChange,
+  moveDeleteOptions = [],
+  moveDeleteCount = 0,
+  moveDeleteItemName = "",
+  moveAffectedLabel = "peserta",
+  moveTargetId = "",
+  onMoveTargetChange,
+  onConfirmMoveDelete,
+  onMoveMembers,
+  bulkMoveOpen = false,
+  onBulkMoveOpenChange,
+  bulkMoveTitle = "Pindahkan Peserta",
+  bulkMoveSubtitle = "",
+  bulkMoveSearch = "",
+  onBulkMoveSearchChange,
+  bulkMoveItems = [],
+  bulkMoveSelectedIds = [],
+  onBulkMoveToggleItem,
+  onBulkMoveToggleAll,
+  bulkMoveOptions = [],
+  bulkMoveTargetLabel = "Opsi tujuan",
+  bulkMoveTargetId = "",
+  onBulkMoveTargetChange,
+  bulkMoveListLoading = false,
+  bulkMoveIsMoving = false,
+  onConfirmBulkMove,
 }: TypeCrudTableProps) {
   const colSpan = 1 + columns.length + (countColumn ? 1 : 0) + 1;
 
@@ -111,7 +167,25 @@ export function TypeCrudTable({
                       </TableCell>
                     ))}
                     {countColumn && (
-                      <TableCell className="text-muted-foreground">{countColumn.accessor(item)}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground font-medium">
+                            {countColumn.accessor(item)}
+                          </span>
+                          {onMoveMembers && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-6 px-2 text-xs text-blue-600 border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+                              onClick={() => onMoveMembers(item)}
+                              title="Pindahkan peserta ke opsi lain"
+                            >
+                              <MoveRight className="w-3 h-3 mr-1" />
+                              Pindah
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
                     )}
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
@@ -196,6 +270,40 @@ export function TypeCrudTable({
         variant="danger"
         isLoading={isDeleting}
         onConfirm={onConfirmDelete || (() => {})}
+      />
+
+      <MoveDeleteDialog
+        open={moveDeleteOpen}
+        onOpenChange={onMoveDeleteOpenChange || (() => {})}
+        entityName={entityName}
+        itemName={moveDeleteItemName || deleteItemName || ""}
+        affectedCount={moveDeleteCount}
+        affectedLabel={moveAffectedLabel}
+        options={moveDeleteOptions}
+        targetId={moveTargetId}
+        onTargetChange={onMoveTargetChange || (() => {})}
+        isLoading={isDeleting}
+        onConfirm={onConfirmMoveDelete || (() => {})}
+      />
+
+      <BulkMoveModal
+        open={bulkMoveOpen}
+        onOpenChange={onBulkMoveOpenChange || (() => {})}
+        title={bulkMoveTitle}
+        subtitle={bulkMoveSubtitle}
+        search={bulkMoveSearch}
+        onSearchChange={onBulkMoveSearchChange || (() => {})}
+        items={bulkMoveItems}
+        selectedIds={bulkMoveSelectedIds}
+        onToggleItem={onBulkMoveToggleItem || (() => {})}
+        onToggleAll={onBulkMoveToggleAll || (() => {})}
+        options={bulkMoveOptions}
+        targetLabel={bulkMoveTargetLabel}
+        targetId={bulkMoveTargetId}
+        onTargetChange={onBulkMoveTargetChange || (() => {})}
+        isLoadingList={bulkMoveListLoading}
+        isMoving={bulkMoveIsMoving}
+        onConfirm={onConfirmBulkMove || (() => {})}
       />
     </div>
   );
