@@ -153,10 +153,9 @@ hipmigo (create/update anggota)
     ▼  Data anggota di-pull
 absensi.hipmibdg.or.id (pull on-demand via public API)
     │
-    ├── GET /member/check (validasi keanggotaan by email)
-    ├── GET /participant/check-by-email (lookup by email)
     ├── GET /participant/check-by-id (lookup by KTA)
-    └── GET /participant/detail (profil lengkap + riwayat)
+    ├── GET /participant/detail (profil lengkap + riwayat)
+    └── GET /event-groups/:id/participant/status (status kepesertaan per event group)
 ```
 
 **Aturan Bisnis:**
@@ -175,11 +174,8 @@ absensi.hipmibdg.or.id (create event & registrasi)
 hipmibdg.or.id (pull on-demand via public API)
     │
     ├── GET /event-groups (daftar event)
-    ├── GET /event-groups/:id (detail event)
-    ├── GET /event-groups/:id/events (event + sesi)
-    ├── GET /event-groups/:id/registrations (daftar peserta)
-    ├── GET /event-groups/:id/attendance (statistik kehadiran)
-    └── GET /daftar-pemilih-sementara (DPS)
+    ├── GET /event-groups/:id/participants (daftar peserta terdaftar — search + filter)
+    └── GET /event-groups/:id/participant/status (status kepesertaan)
 ```
 
 **Aturan Bisnis:**
@@ -243,36 +239,33 @@ Aturan:
 
 ### Endpoint Map
 
-#### Public API — Sudah Ada (9 endpoints)
+#### Public API — Sudah Ada (7 endpoints)
 
 | # | Endpoint | Fungsi | Consumer |
 |---|----------|--------|----------|
-| 1 | `GET /event-groups` | Daftar semua event | hipmibdg.or.id |
-| 2 | `GET /participants` | Search peserta (nama/NIK/perusahaan) | hipmibdg.or.id |
-| 3 | `GET /participant/check` | Cek registrasi by email | hipmibdg.or.id |
-| 4 | `GET /participant/check-by-id` | Lookup anggota by KTA | hipmigo |
-| 5 | `GET /participant/check-by-email` | Lookup anggota by email | hipmigo |
-| 6 | `GET /participant/detail` | Profil lengkap + riwayat | hipmigo |
-| 7 | `GET /member/check` | Validasi keanggotaan | hipmigo |
-| 8 | `GET /daftar-pemilih-sementara` | DPS untuk event | hipmibdg.or.id |
-| 9 | `GET /event-groups/:id/participant/status` | **Status kepesertaan per E-KTA** (sesuai ALUR_STATUS_PESERTA §14) | hipmibdg.or.id |
+| 1 | `GET /event-groups` | Daftar semua event group | hipmibdg.or.id |
+| 2 | `GET /participant/check-by-id` | Lookup anggota by KTA | hipmigo / hipmibdg.or.id |
+| 3 | `GET /participant/detail` | Profil lengkap + riwayat kehadiran | hipmigo / hipmibdg.or.id |
+| 4 | `GET /participation-types` | List status kepesertaan (dropdown mapping) | hipmibdg.or.id |
+| 5 | `GET /membership-types` | List tipe keanggotaan (dropdown filter) | hipmibdg.or.id |
+| 6 | `GET /event-groups/:id/participants` | Daftar peserta terdaftar (search + filter, `limit<=0` = semua) | hipmibdg.or.id |
+| 7 | `GET /event-groups/:id/participant/status` | **Status kepesertaan per E-KTA** (sesuai ALUR_STATUS_PESERTA §14) | hipmibdg.or.id |
 
 #### Internal API — Sudah Ada (1 endpoint)
 
 | # | Endpoint | Fungsi | Consumer |
 |---|----------|--------|----------|
-| 10 | `PUT /registrations/:id/participation-status` | Update participation_status saat approve (DPS→DPT/Peninjau) | hipmibdg.or.id (scope `internal:write`) |
+| 8 | `PUT /registrations/:id/participation-status` | Update participation_status saat approve (DPS→DPT/Peninjau) | hipmibdg.or.id (scope `internal:write`) |
 
 #### Endpoint yang Masih Rencana (belum dibuat)
 
 | # | Endpoint | Fungsi | Consumer |
 |---|----------|--------|----------|
-| 11 | `GET /event-groups/:id` | Detail 1 event group | hipmibdg.or.id |
-| 12 | `GET /event-groups/:id/events` | Event + sesi dalam 1 group | hipmibdg.or.id |
-| 13 | `GET /event-groups/:id/attendance` | Statistik kehadiran | hipmibdg.or.id |
-| 14 | `GET /event-groups/:id/registrations` | Daftar peserta (filterable) | hipmibdg.or.id |
-| 15 | `GET /participant/:id/attendance` | Kehadiran 1 anggota di 1 event group | hipmigo |
-| 16 | `GET /analytics/summary` | Statistik agregat publik | hipmibdg.or.id |
+| 9 | `GET /event-groups/:id` | Detail 1 event group | hipmibdg.or.id |
+| 10 | `GET /event-groups/:id/events` | Event + sesi dalam 1 group | hipmibdg.or.id |
+| 11 | `GET /event-groups/:id/attendance` | Statistik kehadiran | hipmibdg.or.id |
+| 12 | `GET /participant/:id/attendance` | Kehadiran 1 anggota di 1 event group | hipmigo |
+| 13 | `GET /analytics/summary` | Statistik agregat publik | hipmibdg.or.id |
 
 ---
 
@@ -284,7 +277,7 @@ Aturan:
 1. Anggota buka hipmibdg.or.id → lihat daftar event
 2. Klik "Daftar" → redirect ke absensi.hipmibdg.or.id
 3. Absensi pull data anggota dari hipmigo (via public API)
-   └── GET /member/check?email=xxx
+   └── GET /participant/check-by-id?identification_number=xxx
 4. Absensi pull event dari absensi (data sendiri)
 5. Anggota mengisi form → submit registrasi
 6. Absensi create registrasi + generate QR code
@@ -321,9 +314,9 @@ Aturan:
    └── GET /event-groups
 3. Klik 1 event → lihat detail, jumlah peserta, statistik kehadiran
    └── GET /event-groups/:id
-   └── GET /event-groups/:id/attendance
+   └── GET /event-groups/:id/participants?limit=0
 4. Lihat DPS (Daftar Pemilih Sementara) untuk event tertentu
-   └── GET /daftar-pemilih-sementara?event_group_id=xxx
+   └── GET /event-groups/:id/participants?limit=0 (filter `participation_status=dps`)
 5. Semua data di-pull on-demand dari absensi
 ```
 
@@ -630,7 +623,7 @@ sequenceDiagram
     participant Email
 
     Admin->>Absensi: Pilih peserta dari DPS
-    Absensi->>Hipmigo: GET /member/check (validasi anggota)
+    Absensi->>Hipmigo: GET /participant/check-by-id (validasi anggota)
     Hipmigo-->>Absensi: Data anggota (membership, e-KTA)
     
     Note over Absensi: Validasi 1 e-KTA = 1 registrasi
